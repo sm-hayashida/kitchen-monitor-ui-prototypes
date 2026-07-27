@@ -1,6 +1,6 @@
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, toValue } from 'vue';
 import {
-  orderCompletionWindowMs,
+  orderCompletionWindowMs as defaultOrderCompletionWindowMs,
   orderViewCategoryDefinitions,
   orderViewMockOrders,
 } from './orderViewMockData';
@@ -11,15 +11,21 @@ import {
 
 const itemCompletionWindowMs = 5000;
 
-export function useOrderViewMock() {
-  const orders = ref(structuredClone(orderViewMockOrders));
+export function useOrderViewMock({
+  initialOrders = orderViewMockOrders,
+  orderCompletionDurationMs = defaultOrderCompletionWindowMs,
+  itemCompletionDurationMs = itemCompletionWindowMs,
+} = {}) {
+  const orders = ref(structuredClone(toValue(initialOrders)));
   const selectedCategoryId = ref('all');
   const selectedAggregateKey = ref(null);
   const selectedItemId = ref(null);
   const selectedItemAnchor = ref(null);
   const activeItemActionId = ref(null);
   const completionStartedAt = ref({});
+  const completionDurationByOrderId = ref({});
   const itemCompletionStartedAt = ref({});
+  const itemCompletionDurationByItemId = ref({});
   const itemCompletionPreviousQuantityByItemId = ref({});
   const hiddenCompletedItemIds = ref(new Set());
   const processedUnitNumbersByItemId = ref({});
@@ -28,6 +34,13 @@ export function useOrderViewMock() {
   const completionTimers = new Map();
   const itemCompletionTimers = new Map();
   let toastTimer;
+
+  const completionWindowMs = computed(() =>
+    normalizeDurationMs(orderCompletionDurationMs, defaultOrderCompletionWindowMs),
+  );
+  const tableItemCompletionWindowMs = computed(() =>
+    normalizeDurationMs(itemCompletionDurationMs, itemCompletionWindowMs),
+  );
 
   const clockTimer = window.setInterval(() => {
     nowMs.value = Date.now();
@@ -191,6 +204,9 @@ export function useOrderViewMock() {
     const nextStartedAt = { ...itemCompletionStartedAt.value };
     delete nextStartedAt[orderItemId];
     itemCompletionStartedAt.value = nextStartedAt;
+    const nextDurations = { ...itemCompletionDurationByItemId.value };
+    delete nextDurations[orderItemId];
+    itemCompletionDurationByItemId.value = nextDurations;
 
     const nextPreviousQuantities = {
       ...itemCompletionPreviousQuantityByItemId.value,
@@ -240,9 +256,19 @@ export function useOrderViewMock() {
     };
 
     if (hideWhenComplete && nextQuantity === orderItem.quantity) {
+      const durationMs = tableItemCompletionWindowMs.value;
+      if (durationMs === 0) {
+        finishTableItem(orderItemId);
+        return;
+      }
+
       itemCompletionStartedAt.value = {
         ...itemCompletionStartedAt.value,
         [orderItemId]: Date.now(),
+      };
+      itemCompletionDurationByItemId.value = {
+        ...itemCompletionDurationByItemId.value,
+        [orderItemId]: durationMs,
       };
       itemCompletionPreviousQuantityByItemId.value = {
         ...itemCompletionPreviousQuantityByItemId.value,
@@ -250,9 +276,9 @@ export function useOrderViewMock() {
       };
       itemCompletionTimers.set(
         orderItemId,
-        window.setTimeout(() => finishTableItem(orderItemId), itemCompletionWindowMs),
+        window.setTimeout(() => finishTableItem(orderItemId), durationMs),
       );
-      showToast(`${orderItem.name}は5秒後にテーブル一覧から消えます`);
+      showToast(`${orderItem.name}は${formatSeconds(durationMs)}秒後にテーブル一覧から消えます`);
     } else if (!keepOpen) {
       showToast(
         nextQuantity < previousQuantity
@@ -289,6 +315,9 @@ export function useOrderViewMock() {
     const nextStartedAt = { ...itemCompletionStartedAt.value };
     delete nextStartedAt[orderItemId];
     itemCompletionStartedAt.value = nextStartedAt;
+    const nextDurations = { ...itemCompletionDurationByItemId.value };
+    delete nextDurations[orderItemId];
+    itemCompletionDurationByItemId.value = nextDurations;
     const nextPreviousQuantities = {
       ...itemCompletionPreviousQuantityByItemId.value,
     };
@@ -314,7 +343,16 @@ export function useOrderViewMock() {
       const nextState = { ...completionStartedAt.value };
       delete nextState[orderId];
       completionStartedAt.value = nextState;
+      const nextDurations = { ...completionDurationByOrderId.value };
+      delete nextDurations[orderId];
+      completionDurationByOrderId.value = nextDurations;
       showToast('完了を取り消しました');
+      return;
+    }
+
+    const durationMs = completionWindowMs.value;
+    if (durationMs === 0) {
+      finishOrder(orderId);
       return;
     }
 
@@ -322,11 +360,15 @@ export function useOrderViewMock() {
       ...completionStartedAt.value,
       [orderId]: Date.now(),
     };
+    completionDurationByOrderId.value = {
+      ...completionDurationByOrderId.value,
+      [orderId]: durationMs,
+    };
     completionTimers.set(
       orderId,
-      window.setTimeout(() => finishOrder(orderId), orderCompletionWindowMs),
+      window.setTimeout(() => finishOrder(orderId), durationMs),
     );
-    showToast('3秒以内なら完了を取り消せます');
+    showToast(`${formatSeconds(durationMs)}秒以内なら完了を取り消せます`);
   }
 
   function finishOrder(orderId) {
@@ -336,6 +378,9 @@ export function useOrderViewMock() {
     const nextState = { ...completionStartedAt.value };
     delete nextState[orderId];
     completionStartedAt.value = nextState;
+    const nextDurations = { ...completionDurationByOrderId.value };
+    delete nextDurations[orderId];
+    completionDurationByOrderId.value = nextDurations;
     if (finishedOrder) {
       const finishedItemIds = new Set(
         finishedOrder.items.map((orderItem) => orderItem.order_item_id),
@@ -381,10 +426,12 @@ export function useOrderViewMock() {
     closeItemDetail,
     closeItemAction,
     completionStartedAt,
-    completionWindowMs: orderCompletionWindowMs,
+    completionDurationByOrderId,
+    completionWindowMs,
     hiddenCompletedItemIds,
     itemCompletionStartedAt,
-    itemCompletionWindowMs,
+    itemCompletionDurationByItemId,
+    itemCompletionWindowMs: tableItemCompletionWindowMs,
     nowMs,
     openAggregate,
     openItemDetail,
@@ -400,4 +447,13 @@ export function useOrderViewMock() {
     toggleOrderCompletion,
     visibleOrders,
   };
+}
+
+function normalizeDurationMs(duration, fallback) {
+  const value = Number(toValue(duration));
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function formatSeconds(durationMs) {
+  return durationMs / 1000;
 }

@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, toValue, watch } from 'vue';
 
 export function useResponsiveColumnLayout(
   targetRef,
@@ -51,7 +51,7 @@ export function useResponsiveColumnLayout(
       );
       const measuredHeight = Math.floor(element.clientHeight - navigationHeight - contentInset);
       const measuredColumnCount = Math.floor(
-        (element.clientWidth + columnGap) / (minColumnWidth + columnGap),
+        (element.clientWidth + columnGap) / (toValue(minColumnWidth) + columnGap),
       );
 
       columnHeight.value = measuredHeight > 0 ? measuredHeight : minColumnHeight;
@@ -79,6 +79,14 @@ export function useResponsiveColumnLayout(
       cancelAnimationFrame(settleFrame);
     }
   });
+
+  watch(
+    () => toValue(minColumnWidth),
+    () => {
+      isLayoutReady.value = false;
+      measure();
+    },
+  );
 
   return {
     columnCount,

@@ -10,6 +10,7 @@ import {
   X,
 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { getOrderItemDisplayName } from '../../features/kitchen-monitor/orderItemPresentation';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
 
@@ -29,12 +30,21 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'set-item-processed-quantity']);
+const comparison = useComparisonStore();
 const popoverRef = ref(null);
 const viewportRevision = ref(0);
 
 const displayName = computed(() => getOrderItemDisplayName(props.detail.orderItem));
+const showCourse = computed(() => comparison.enabledInfo.value.has('course'));
+const showOptions = computed(() => comparison.enabledInfo.value.has('options'));
+const showItemMemo = computed(() => comparison.enabledInfo.value.has('itemMemo'));
+const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
+const showAggregate = computed(() => comparison.enabledInfo.value.has('aggregate'));
 const orderTiming = computed(() =>
-  getOrderTimingStatus(props.detail.order.ordered_elapsed_minutes),
+  getOrderTimingStatus(props.detail.order.ordered_elapsed_minutes, {
+    targetMinutes: comparison.settings.targetMinutes,
+    warningWindowMinutes: comparison.settings.warningMinutes,
+  }),
 );
 const sourceLabel = computed(() => {
   if (props.detail.order.order_source === 'mobile') {
@@ -54,7 +64,10 @@ const itemTiming = computed(() => {
 
   const difference = props.detail.order.ordered_elapsed_minutes - targetMinutes;
   return {
-    className: difference >= 0 ? 'timing-overdue' : difference >= -3 ? 'timing-warning' : '',
+    className:
+      difference >= 0 || Math.abs(difference) <= comparison.settings.warningMinutes
+        ? difference >= 0 ? 'timing-overdue' : 'timing-warning'
+        : '',
     label: difference >= 0 ? `${difference}分超過` : `あと${Math.abs(difference)}分`,
     targetMinutes,
   };
@@ -162,7 +175,7 @@ onBeforeUnmount(() => {
     >
       <header class="order-item-detail-head">
         <div>
-          <span v-if="detail.orderItem.course_name" class="detail-course-label">
+          <span v-if="showCourse && detail.orderItem.course_name" class="detail-course-label">
             <Layers3 :size="13" aria-hidden="true" />
             {{ detail.orderItem.course_name }}
           </span>
@@ -205,7 +218,7 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section v-if="detail.orderItem.toppings.length" class="order-item-detail-section">
+        <section v-if="showOptions && detail.orderItem.toppings.length" class="order-item-detail-section">
           <h3>オプション <span>{{ detail.orderItem.toppings.length }}件</span></h3>
           <div class="order-item-detail-options">
             <span v-for="topping in detail.orderItem.toppings" :key="topping.id">
@@ -214,17 +227,17 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section v-if="detail.orderItem.memo" class="order-item-detail-section">
+        <section v-if="showItemMemo && detail.orderItem.memo" class="order-item-detail-section">
           <h3><MessageSquareText :size="16" aria-hidden="true" /> 商品メモ</h3>
           <p class="order-item-detail-memo">{{ detail.orderItem.memo }}</p>
         </section>
 
-        <section v-if="detail.order.order_memo" class="order-item-detail-section">
+        <section v-if="showOrderMemo && detail.order.order_memo" class="order-item-detail-section">
           <h3><MessageSquareText :size="16" aria-hidden="true" /> 注文メモ</h3>
           <p class="order-item-detail-memo order-memo">{{ detail.order.order_memo }}</p>
         </section>
 
-        <section class="order-item-detail-section order-item-detail-aggregate">
+        <section v-if="showAggregate" class="order-item-detail-section order-item-detail-aggregate">
           <span>この商品</span>
           <strong>{{ detail.orderItem.quantity }}個</strong>
           <template v-if="detail.aggregate">

@@ -1,6 +1,7 @@
 <script setup>
 import { Clock } from '@lucide/vue';
 import { computed } from 'vue';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
 import CountdownProgressLine from './CountdownProgressLine.vue';
 import OrderItemRow from './OrderItemRow.vue';
@@ -40,9 +41,15 @@ defineEmits([
   'toggle-item-action',
 ]);
 
+const comparison = useComparisonStore();
 const timingStatus = computed(() =>
-  getOrderTimingStatus(props.order.ordered_elapsed_minutes),
+  getOrderTimingStatus(props.order.ordered_elapsed_minutes, {
+    targetMinutes: comparison.settings.targetMinutes,
+    warningWindowMinutes: comparison.settings.warningMinutes,
+  }),
 );
+const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
+const showBulkComplete = computed(() => comparison.enabledInfo.value.has('bulkComplete'));
 const isUndoable = computed(() => Boolean(props.completionStartedAt));
 const sourceOrderId = computed(() => props.order.source_order_id ?? props.order.id);
 const segmentIndex = computed(() => props.order.segment_index ?? 1);
@@ -96,7 +103,7 @@ const hasOpenItemAction = computed(() =>
     </header>
 
     <button
-      v-if="!isContinuation && order.order_memo"
+      v-if="!isContinuation && showOrderMemo && order.order_memo"
       class="order-card-memo-preview"
       type="button"
       @click.stop="$emit('open-item-detail', {
@@ -125,7 +132,7 @@ const hasOpenItemAction = computed(() =>
     </div>
 
     <button
-      v-if="isLastSegment"
+      v-if="isLastSegment && showBulkComplete"
       class="order-view-complete-button"
       :class="{ undoable: isUndoable }"
       type="button"

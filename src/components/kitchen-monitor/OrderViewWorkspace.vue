@@ -3,6 +3,8 @@ import { ListFilter } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { createOrderCardSegments } from '../../features/kitchen-monitor/orderCardSegments';
 import { createOrderedMasonryPages } from '../../features/kitchen-monitor/orderMasonryLayout';
+import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
@@ -30,10 +32,21 @@ defineEmits(['switch-view']);
 const currentPage = ref(1);
 const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
+const comparison = useComparisonStore();
+const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
+const comparisonPageClass = computed(() => [
+  'order-view-layout',
+  `comparison-rows-${comparison.settings.rowSpacing}`,
+  comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
+].join(' '));
+const cardTransitionName = computed(() =>
+  comparison.settings.motion ? 'masonry-card' : '',
+);
 const isPaged = computed(() => props.layout === 'n-paged');
 const isScroll = computed(() => props.layout === 'n-scroll');
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
 });
 
@@ -43,6 +56,7 @@ const {
   closeAggregate,
   closeItemDetail,
   closeItemAction,
+  completionDurationByOrderId,
   completionStartedAt,
   completionWindowMs,
   nowMs,
@@ -57,7 +71,11 @@ const {
   toggleItemAction,
   toggleOrderCompletion,
   visibleOrders,
-} = useOrderViewMock();
+} = useOrderViewMock({
+  initialOrders: scenarioOrders,
+  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
+  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
+});
 
 const {
   departments,
@@ -133,7 +151,7 @@ function saveDepartmentSettings(departmentIds) {
     :categories="[]"
     external-settings
     :now-ms="nowMs"
-    page-class="order-view-layout"
+    :page-class="comparisonPageClass"
     :show-navigation="false"
     :toast="toast"
     @open-settings="isSettingsOpen = true"
@@ -169,7 +187,7 @@ function saveDepartmentSettings(departmentIds) {
             <TransitionGroup
               tag="div"
               class="horizontal-column-stack"
-              name="masonry-card"
+              :name="cardTransitionName"
             >
               <OrderViewCard
                 v-for="order in column"
@@ -177,7 +195,7 @@ function saveDepartmentSettings(departmentIds) {
                 :active-item-action-id="activeItemActionId"
                 :aggregate-by-key="aggregateByKey"
                 :completion-started-at="completionStartedAt[order.source_order_id ?? order.id]"
-                :completion-window-ms="completionWindowMs"
+                :completion-window-ms="completionDurationByOrderId[order.source_order_id ?? order.id] ?? completionWindowMs"
                 :order="order"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 @complete-order="toggleOrderCompletion"
@@ -207,7 +225,7 @@ function saveDepartmentSettings(departmentIds) {
               :active-item-action-id="activeItemActionId"
               :aggregate-by-key="aggregateByKey"
               :completion-started-at="completionStartedAt[order.source_order_id ?? order.id]"
-              :completion-window-ms="completionWindowMs"
+              :completion-window-ms="completionDurationByOrderId[order.source_order_id ?? order.id] ?? completionWindowMs"
               :order="order"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               @complete-order="toggleOrderCompletion"
