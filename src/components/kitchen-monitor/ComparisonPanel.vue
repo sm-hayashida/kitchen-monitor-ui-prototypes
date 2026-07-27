@@ -6,6 +6,7 @@ import {
   comparisonIntensityOptions,
   comparisonLabels,
   comparisonOptions,
+  comparisonQuantityDisplayStyleOptions,
   comparisonRecipeGroups,
   comparisonRecipes,
   comparisonThemeOptions,
@@ -47,6 +48,12 @@ const colorPreviewSamples = [
   { id: 'completed', label: '完了' },
   { id: 'selected', label: '選択中' },
 ];
+const quantityPreviewSamples = computed(() =>
+  comparisonQuantityDisplayStyleOptions.map((option) => ({
+    ...option,
+    active: comparison.settings.quantityDisplayStyle === option.id,
+  })),
+);
 
 function updateNumber(key, event) {
   comparison.setField(key, Number(event.target.value));
@@ -252,6 +259,42 @@ async function copyShareUrl() {
             </option>
           </select>
         </label>
+        <label>
+          <span>数量表示</span>
+          <select
+            :value="comparison.settings.quantityDisplayStyle"
+            @change="updateText('quantityDisplayStyle', $event)"
+          >
+            <option
+              v-for="style in comparisonQuantityDisplayStyleOptions"
+              :key="style.id"
+              :value="style.id"
+            >
+              {{ style.label }}
+            </option>
+          </select>
+        </label>
+        <div class="comparison-quantity-style-preview" aria-label="数量表示サンプル">
+          <button
+            v-for="style in quantityPreviewSamples"
+            :key="style.id"
+            type="button"
+            :class="[
+              `quantity-style-${style.id}`,
+              { active: style.active },
+            ]"
+            @click="comparison.setField('quantityDisplayStyle', style.id)"
+          >
+            <strong>{{ style.label }}</strong>
+            <span class="quantity-style-sample">
+              <i class="sample-main">3</i>
+              <i
+                v-if="style.id !== 'a'"
+                class="sample-total"
+              >{{ style.id === 'i' ? '(8)' : '8' }}</i>
+            </span>
+          </button>
+        </div>
         <div class="comparison-toggle-grid">
           <label v-for="key in comparisonInfoKeys" :key="key">
             <input

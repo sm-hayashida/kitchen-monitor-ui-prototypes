@@ -53,6 +53,7 @@ const showCourse = computed(() => comparison.enabledInfo.value.has('course'));
 const showOptions = computed(() => comparison.enabledInfo.value.has('options'));
 const showItemMemo = computed(() => comparison.enabledInfo.value.has('itemMemo'));
 const showAggregate = computed(() => comparison.enabledInfo.value.has('aggregate'));
+const quantityDisplayStyle = computed(() => comparison.settings.quantityDisplayStyle ?? 'current');
 const visibleToppings = computed(() =>
   showOptions.value ? inlineDetails.value.visibleToppings : [],
 );
@@ -70,6 +71,20 @@ const quantityLabel = computed(() => {
     ? `${processedCount.value}/${props.orderItem.quantity}`
     : props.orderItem.quantity;
 });
+const showAggregateQuantity = computed(() => {
+  if (!showAggregate.value || !aggregate.value || quantityDisplayStyle.value === 'a') {
+    return false;
+  }
+  if (quantityDisplayStyle.value === 'g') {
+    return aggregate.value.totalQuantity !== props.orderItem.quantity;
+  }
+  return true;
+});
+const aggregateQuantityLabel = computed(() =>
+  quantityDisplayStyle.value === 'i' && showAggregateQuantity.value
+    ? `(${aggregate.value.totalQuantity})`
+    : aggregate.value?.totalQuantity,
+);
 const quantityOptions = computed(() =>
   props.orderItem.quantity <= 6
     ? Array.from({ length: props.orderItem.quantity + 1 }, (_, index) => index)
@@ -124,6 +139,8 @@ const emit = defineEmits([
       'action-open': activeItemActionId === orderItem.order_item_id,
       'fully-processed': processedCount === orderItem.quantity,
       'completion-pending': itemCompletionStartedAt,
+      [`quantity-style-${quantityDisplayStyle}`]: true,
+      'has-aggregate-quantity': showAggregateQuantity,
     }"
   >
     <button
@@ -160,7 +177,7 @@ const emit = defineEmits([
       </span>
     </button>
     <button
-      v-if="showAggregate && aggregate"
+      v-if="showAggregateQuantity"
       class="aggregate-quantity-button"
       :class="{ stacked: aggregate.orderCount > 1 }"
       type="button"
@@ -168,7 +185,7 @@ const emit = defineEmits([
       :aria-label="`${displayName}の全注文を表示`"
       @click.stop="$emit('open-aggregate', aggregateKey)"
     >
-      {{ aggregate.totalQuantity }}
+      <span>{{ aggregateQuantityLabel }}</span>
     </button>
     <span
       v-else-if="processedCount === orderItem.quantity"

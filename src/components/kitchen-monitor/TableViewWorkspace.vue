@@ -63,6 +63,11 @@ const cardTransitionName = computed(() =>
 const itemTransitionName = computed(() =>
   comparison.settings.motion ? 'table-item' : '',
 );
+const cardEstimateOptions = computed(() => ({
+  cardMinWidth: comparison.settings.cardMinWidth,
+  rowSpacing: comparison.settings.rowSpacing,
+  visibleInfo: comparison.settings.info,
+}));
 const isPaged = computed(() => props.layout === 'n-paged');
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
@@ -154,12 +159,13 @@ const sortedTableGroups = computed(() =>
 const tableSegments = computed(() =>
   createTableCardSegments(globallySortedTableGroups.value, {
     maxCardHeight: columnHeight.value,
+    estimateOptions: cardEstimateOptions.value,
   }),
 );
 const pagedTableColumns = computed(() =>
   createOrderedMasonryPages(tableSegments.value, {
     columnCount: columnCount.value,
-    estimateCardHeight: estimateTableCardHeight,
+    estimateCardHeight: (table) => estimateTableCardHeight(table, cardEstimateOptions.value),
     maxColumnHeight: columnHeight.value,
   }),
 );
@@ -190,9 +196,10 @@ const groupedScrollLayout = computed(() => {
   sortedTableCategoryGroups.value.forEach((group, groupIndex) => {
     const segments = createTableCardSegments(group.tables, {
       maxCardHeight: groupedColumnHeight,
+      estimateOptions: cardEstimateOptions.value,
     });
     const groupColumns = createCompactFlowColumns(segments, {
-      estimateCardHeight: estimateTableCardHeight,
+      estimateCardHeight: (table) => estimateTableCardHeight(table, cardEstimateOptions.value),
       maxColumnHeight: groupedColumnHeight,
     });
     const startColumnIndex = columns.length;
