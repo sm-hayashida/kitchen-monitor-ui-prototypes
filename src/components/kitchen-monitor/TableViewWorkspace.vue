@@ -5,6 +5,8 @@ import {
   createCompactFlowColumns,
   createOrderedMasonryPages,
 } from '../../features/kitchen-monitor/orderMasonryLayout';
+import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   createTableCardSegments,
   createTableGroups,
@@ -44,9 +46,27 @@ const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
 const horizontalScrollerRef = ref(null);
 const activeTableCategoryId = ref('');
+const comparison = useComparisonStore();
+const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
+const timingOptions = computed(() => ({
+  targetMinutes: comparison.settings.targetMinutes,
+  warningWindowMinutes: comparison.settings.warningMinutes,
+}));
+const comparisonPageClass = computed(() => [
+  'table-view-layout',
+  `comparison-rows-${comparison.settings.rowSpacing}`,
+  comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
+].join(' '));
+const cardTransitionName = computed(() =>
+  comparison.settings.motion ? 'masonry-card' : '',
+);
+const itemTransitionName = computed(() =>
+  comparison.settings.motion ? 'table-item' : '',
+);
 const isPaged = computed(() => props.layout === 'n-paged');
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
 });
 
@@ -58,6 +78,7 @@ const {
   closeItemDetail,
   closeItemAction,
   hiddenCompletedItemIds,
+  itemCompletionDurationByItemId,
   itemCompletionStartedAt,
   itemCompletionWindowMs,
   nowMs,
@@ -71,7 +92,11 @@ const {
   toast,
   toggleItemAction,
   visibleOrders,
-} = useOrderViewMock();
+} = useOrderViewMock({
+  initialOrders: scenarioOrders,
+  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
+  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
+});
 
 const {
   departments,
@@ -172,10 +197,10 @@ const groupedScrollLayout = computed(() => {
     });
     const startColumnIndex = columns.length;
     const overdueTableCount = group.tables.filter(
-      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes).isOverdue,
+      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes, timingOptions.value).isOverdue,
     ).length;
     const warningTableCount = group.tables.filter(
-      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes).isWarning,
+      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes, timingOptions.value).isWarning,
     ).length;
 
     groups.push({
@@ -309,7 +334,7 @@ function syncActiveTableCategory(columnIndex) {
     :categories="[]"
     external-settings
     :now-ms="nowMs"
-    page-class="table-view-layout"
+    :page-class="comparisonPageClass"
     :show-navigation="false"
     :toast="toast"
     @open-settings="isSettingsOpen = true"
@@ -394,7 +419,7 @@ function syncActiveTableCategory(columnIndex) {
             <TransitionGroup
               tag="div"
               class="horizontal-column-stack"
-              name="masonry-card"
+              :name="cardTransitionName"
             >
               <TableViewCard
                 v-for="table in column"
@@ -406,6 +431,7 @@ function syncActiveTableCategory(columnIndex) {
                 :is-pinned="pinnedTableIds.has(table.source_table_id)"
                 :is-reorder-mode="isReorderMode"
                 :item-completion-started-at="itemCompletionStartedAt"
+                :item-completion-duration-by-item-id="itemCompletionDurationByItemId"
                 :item-completion-window-ms="itemCompletionWindowMs"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 :table="table"
@@ -441,6 +467,7 @@ function syncActiveTableCategory(columnIndex) {
               :is-pinned="pinnedTableIds.has(table.source_table_id)"
               :is-reorder-mode="isReorderMode"
               :item-completion-started-at="itemCompletionStartedAt"
+              :item-completion-duration-by-item-id="itemCompletionDurationByItemId"
               :item-completion-window-ms="itemCompletionWindowMs"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               :table="table"

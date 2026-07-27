@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Clock, Pin } from '@lucide/vue';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   getOrderTimingStatus,
   summarizeOrderTimings,
@@ -36,6 +37,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  itemCompletionDurationByItemId: {
+    type: Object,
+    required: true,
+  },
   itemCompletionWindowMs: {
     type: Number,
     required: true,
@@ -60,11 +65,20 @@ defineEmits([
   'toggle-pinned',
 ]);
 
+const comparison = useComparisonStore();
+const timingOptions = computed(() => ({
+  targetMinutes: comparison.settings.targetMinutes,
+  warningWindowMinutes: comparison.settings.warningMinutes,
+}));
+const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
+const itemTransitionName = computed(() =>
+  comparison.settings.motion ? 'table-item' : '',
+);
 const isContinuation = computed(() => props.table.segment_index > 1);
 const timingStatus = computed(() =>
-  getOrderTimingStatus(props.table.earliest_elapsed_minutes),
+  getOrderTimingStatus(props.table.earliest_elapsed_minutes, timingOptions.value),
 );
-const timingSummary = computed(() => summarizeOrderTimings(props.table.orders));
+const timingSummary = computed(() => summarizeOrderTimings(props.table.orders, timingOptions.value));
 const pendingQuantity = computed(() =>
   props.table.orders.reduce(
     (tableTotal, order) =>
@@ -84,7 +98,7 @@ const hasOpenItemAction = computed(() =>
 );
 
 function orderGroupTiming(orderGroup) {
-  return getOrderTimingStatus(orderGroup.elapsed_minutes);
+  return getOrderTimingStatus(orderGroup.elapsed_minutes, timingOptions.value);
 }
 </script>
 
@@ -168,7 +182,7 @@ function orderGroupTiming(orderGroup) {
         >
           <span>
             注文 {{ orderGroup.order_index }}
-            <i v-if="orderGroup.order_memo" class="table-order-memo-flag">メモ</i>
+            <i v-if="showOrderMemo && orderGroup.order_memo" class="table-order-memo-flag">メモ</i>
           </span>
           <b>注文から{{ orderGroup.elapsed_minutes }}分</b>
           <em v-if="orderGroupTiming(orderGroup).state !== 'normal'">
@@ -176,7 +190,7 @@ function orderGroupTiming(orderGroup) {
           </em>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
-        <TransitionGroup tag="div" class="table-order-items" name="table-item">
+        <TransitionGroup tag="div" class="table-order-items" :name="itemTransitionName">
           <OrderItemRow
             v-for="orderItem in orderGroup.items"
             :key="orderItem.order_item_id"
@@ -184,7 +198,7 @@ function orderGroupTiming(orderGroup) {
             :aggregate-by-key="aggregateByKey"
             :interactions-disabled="isReorderMode"
             :item-completion-started-at="itemCompletionStartedAt[orderItem.order_item_id]"
-            :item-completion-window-ms="itemCompletionWindowMs"
+            :item-completion-window-ms="itemCompletionDurationByItemId[orderItem.order_item_id] ?? itemCompletionWindowMs"
             :order-item="orderItem"
             :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
             @cancel-item-completion="$emit('cancel-item-completion', $event)"

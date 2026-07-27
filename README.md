@@ -21,6 +21,12 @@ Kitchen Monitor の注文別表示とテーブル別表示を比較するため�
 
 注文別では、数量タップによる部分調理、商品詳細、同一商品の横断集計、注文全体の完了と取消を確認できます。テーブル別では、複数注文の集約、商品完了後の非表示と取消、並び替え、ピン留め、グループ化を確認できます。
 
+## 比較パネル
+
+画面右下の`比較`から、レビュー用の非モーダルパネルを開けます。通常の業務設定とは分けて、表示密度、表示情報、数量表現、完了・非表示時間、目標時間、期限間近、固定シナリオ、プリセットを同じモック上で切り替えます。
+
+比較値はURLハッシュのqueryに反映されます。`共有URL`でコピーしたURLは、現在の画面、シナリオ、表示情報、数量モード、タイミング、密度、行間、motion設定を再現し、`compare=1`で比較パネルを開きます。比較値は`localStorage`やサーバーには保存しません。
+
 ## ローカル起動
 
 ```bash
@@ -33,6 +39,7 @@ npm run dev
 ## ビルド
 
 ```bash
+npm test
 npm run build
 npm run preview
 ```
@@ -50,6 +57,8 @@ npm run preview
 - `src/pages/`: 比較画面単位のページコンポーネント
 - `src/components/kitchen-monitor/`: 注文・テーブルカード、設定、詳細、横スクロールUI
 - `src/features/kitchen-monitor/orderViewMockData.js`: 注文別表示用の固定注文データ
+- `src/features/kitchen-monitor/comparisonConfig.js`: 比較値、preset、URL parse/serialize
+- `src/features/kitchen-monitor/comparisonScenarios.js`: 比較用の固定シナリオ生成
 - `src/features/kitchen-monitor/useOrderViewMock.js`: 数量、横断集計、完了、取消のモック状態
 - `src/features/kitchen-monitor/useTableLayoutPreferences.js`: テーブルの並び順、ピン、グループ化
 - `src/style.css`: iPad 横画面向けの共通スタイル

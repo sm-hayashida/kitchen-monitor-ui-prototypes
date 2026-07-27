@@ -5,6 +5,7 @@ import {
   getOrderItemDisplayName,
   getOrderItemInlineDetails,
 } from '../../features/kitchen-monitor/orderItemPresentation';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import CountdownProgressLine from './CountdownProgressLine.vue';
 
 const props = defineProps({
@@ -38,14 +39,37 @@ const props = defineProps({
   },
 });
 
+const comparison = useComparisonStore();
 const processedUnits = computed(
   () => props.processedUnitNumbersByItemId[props.orderItem.order_item_id] ?? [],
 );
 const processedCount = computed(() => processedUnits.value.length);
+const remainingCount = computed(() => Math.max(0, props.orderItem.quantity - processedCount.value));
 const aggregateKey = computed(() => getOrderItemAggregateKey(props.orderItem));
 const aggregate = computed(() => props.aggregateByKey[aggregateKey.value] ?? null);
 const displayName = computed(() => getOrderItemDisplayName(props.orderItem));
 const inlineDetails = computed(() => getOrderItemInlineDetails(props.orderItem));
+const showCourse = computed(() => comparison.enabledInfo.value.has('course'));
+const showOptions = computed(() => comparison.enabledInfo.value.has('options'));
+const showItemMemo = computed(() => comparison.enabledInfo.value.has('itemMemo'));
+const showAggregate = computed(() => comparison.enabledInfo.value.has('aggregate'));
+const visibleToppings = computed(() =>
+  showOptions.value ? inlineDetails.value.visibleToppings : [],
+);
+const hiddenToppingCount = computed(() =>
+  showOptions.value ? inlineDetails.value.hiddenToppingCount : 0,
+);
+const quantityLabel = computed(() => {
+  if (comparison.settings.quantityMode === 'remaining') {
+    return remainingCount.value;
+  }
+  if (comparison.settings.quantityMode === 'progress') {
+    return `${processedCount.value}/${props.orderItem.quantity}`;
+  }
+  return processedCount.value > 0
+    ? `${processedCount.value}/${props.orderItem.quantity}`
+    : props.orderItem.quantity;
+});
 const quantityOptions = computed(() =>
   props.orderItem.quantity <= 6
     ? Array.from({ length: props.orderItem.quantity + 1 }, (_, index) => index)
@@ -110,8 +134,7 @@ const emit = defineEmits([
       :aria-label="`${displayName}の調理数を変更`"
       @click.stop="$emit('toggle-item-action', orderItem.order_item_id)"
     >
-      <span v-if="processedCount > 0">{{ processedCount }}/{{ orderItem.quantity }}</span>
-      <span v-else>{{ orderItem.quantity }}</span>
+      <span>{{ quantityLabel }}</span>
     </button>
     <button
       class="order-item-description order-item-detail-trigger"
@@ -122,22 +145,22 @@ const emit = defineEmits([
     >
       <b>{{ displayName }}</b>
       <span
-        v-if="orderItem.course_name || inlineDetails.visibleToppings.length"
+        v-if="(showCourse && orderItem.course_name) || visibleToppings.length"
         class="order-item-options"
       >
-        <i v-if="orderItem.course_name" class="order-item-course">{{ orderItem.course_name }}</i>
-        <template v-if="inlineDetails.visibleToppings.length">
-          {{ inlineDetails.visibleToppings.map((topping) => topping.name).join('・') }}
+        <i v-if="showCourse && orderItem.course_name" class="order-item-course">{{ orderItem.course_name }}</i>
+        <template v-if="visibleToppings.length">
+          {{ visibleToppings.map((topping) => topping.name).join('・') }}
         </template>
-        <em v-if="inlineDetails.hiddenToppingCount">他{{ inlineDetails.hiddenToppingCount }}件</em>
+        <em v-if="hiddenToppingCount">他{{ hiddenToppingCount }}件</em>
       </span>
-      <span v-if="inlineDetails.memo" class="order-item-memo">
+      <span v-if="showItemMemo && inlineDetails.memo" class="order-item-memo">
         {{ inlineDetails.memo }}
         <em v-if="inlineDetails.hasTruncatedMemo">全文</em>
       </span>
     </button>
     <button
-      v-if="aggregate"
+      v-if="showAggregate && aggregate"
       class="aggregate-quantity-button"
       :class="{ stacked: aggregate.orderCount > 1 }"
       type="button"
@@ -147,7 +170,12 @@ const emit = defineEmits([
     >
       {{ aggregate.totalQuantity }}
     </button>
-    <span v-else class="order-item-processed-mark" aria-label="すべて調理済み">✓</span>
+    <span
+      v-else-if="processedCount === orderItem.quantity"
+      class="order-item-processed-mark"
+      aria-label="すべて調理済み"
+    >✓</span>
+    <span v-else class="order-item-aggregate-placeholder" aria-hidden="true"></span>
 
     <div
       v-if="!interactionsDisabled && activeItemActionId === orderItem.order_item_id"

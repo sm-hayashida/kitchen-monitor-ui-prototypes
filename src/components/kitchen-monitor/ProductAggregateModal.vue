@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
 
 const props = defineProps({
@@ -10,10 +11,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+const comparison = useComparisonStore();
 const itemsPerPage = 8;
 const currentPage = ref(1);
 const touchStartX = ref(null);
 
+const showCourse = computed(() => comparison.enabledInfo.value.has('course'));
+const showOptions = computed(() => comparison.enabledInfo.value.has('options'));
+const showItemMemo = computed(() => comparison.enabledInfo.value.has('itemMemo'));
 const pageCount = computed(() => Math.max(1, Math.ceil(props.aggregate.matches.length / itemsPerPage)));
 const pageMatches = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
@@ -36,7 +41,10 @@ function setPage(nextPage) {
 }
 
 function timingFor(match) {
-  return getOrderTimingStatus(match.order.ordered_elapsed_minutes);
+  return getOrderTimingStatus(match.order.ordered_elapsed_minutes, {
+    targetMinutes: comparison.settings.targetMinutes,
+    warningWindowMinutes: comparison.settings.warningMinutes,
+  });
 }
 
 function onKeydown(event) {
@@ -91,7 +99,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
           <div>
             <small>
               同一商品の注文内訳
-              <template v-if="aggregate.courseName">・{{ aggregate.courseName }}</template>
+              <template v-if="showCourse && aggregate.courseName">
+                ・{{ aggregate.courseName }}
+              </template>
             </small>
             <h2>{{ aggregate.name }}</h2>
           </div>
@@ -117,12 +127,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 ・{{ match.orderItem.processed_quantity }}/{{ match.orderItem.quantity }}調理済み
               </template>
             </p>
-            <div v-if="match.orderItem.toppings.length" class="aggregate-option-list">
+            <div
+              v-if="showOptions && match.orderItem.toppings.length"
+              class="aggregate-option-list"
+            >
               <span v-for="topping in match.orderItem.toppings" :key="topping.id">
                 {{ topping.name }}
               </span>
             </div>
-            <p v-if="match.orderItem.memo" class="aggregate-order-memo">
+            <p
+              v-if="showItemMemo && match.orderItem.memo"
+              class="aggregate-order-memo"
+            >
               {{ match.orderItem.memo }}
             </p>
           </article>
