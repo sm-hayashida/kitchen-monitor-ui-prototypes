@@ -26,6 +26,7 @@ import {
   createTableGroups,
   estimateTableCardHeight,
 } from '../src/features/kitchen-monitor/tableViewModel.js';
+import { createQuantityDisplayModel } from '../src/features/kitchen-monitor/quantityDisplay.js';
 
 const styleCss = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
 const orderItemRowVue = readFileSync(
@@ -81,6 +82,21 @@ test('share hash serializes a complete reproducible comparison state', () => {
   assert.equal(parsed.openPanel, true);
   assert.deepEqual(parsed.settings, settings);
   assert.deepEqual(parsed.unknownQueryEntries, [['utm_source', 'review']]);
+});
+
+test('quantity display style k and l round trip through comparison hash', () => {
+  const baseSettings = createDefaultComparisonSettings();
+
+  for (const quantityDisplayStyle of ['k', 'l']) {
+    const hash = serializeComparisonHash('order-n-scroll', {
+      ...baseSettings,
+      quantityDisplayStyle,
+    });
+    const parsed = parseComparisonHash(hash);
+
+    assert.match(hash, new RegExp(`cmp_qty_style=${quantityDisplayStyle}`));
+    assert.equal(parsed.settings.quantityDisplayStyle, quantityDisplayStyle);
+  }
 });
 
 test('share hash includes default color axes when complete state is requested', () => {
@@ -208,13 +224,13 @@ test('overview recipe and quantity display options keep locked values', () => {
   assert.ok(comparisonOptions.cardMinWidths.includes(260));
   assert.deepEqual(
     comparisonQuantityDisplayStyleOptions.map((option) => option.id),
-    ['current', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+    ['current', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'],
   );
   assert.deepEqual(
     comparisonQuantityDisplayStyleOptions.map((option) => option.label),
     [
       '現行の左主数量 + 右全注文集計',
-      'A 主数量のみ',
+      'A 残数量のみ',
       'B 独立2チップ',
       'C 強弱つき2チップ',
       'D 大小・右下配置',
@@ -222,49 +238,126 @@ test('overview recipe and quantity display options keep locked values', () => {
       'F チップ＋補助数値',
       'G 差分時のみ合計',
       'H 塗り＋アウトライン',
-      'I 主数量＋括弧合計',
+      'I 残＋括弧合計',
       'J 縦積み・合計上小',
+      'K 右側・主数量＋横断集計',
+      'L 右側・×残数量',
     ],
   );
 });
 
-test('quantity display B and J keep CSS placement contracts', () => {
+test('quantity display model uses item remain and source total for A to J', () => {
+  const base = {
+    quantityMode: 'progress',
+    processedCount: 2,
+    totalQuantity: 4,
+    aggregateTotalQuantity: 9,
+    hasAggregate: true,
+    showAggregate: true,
+  };
+
+  assert.equal(createQuantityDisplayModel({ ...base, style: 'a' }).primaryLabel, '2');
+  assert.equal(createQuantityDisplayModel({ ...base, style: 'a' }).showSourceTotal, false);
+  for (const style of ['b', 'c', 'd', 'e', 'f', 'h', 'j']) {
+    const display = createQuantityDisplayModel({ ...base, style });
+
+    assert.equal(display.primaryLabel, '2');
+    assert.equal(display.sourceTotalLabel, '4');
+    assert.equal(display.showSourceTotal, true);
+    assert.equal(display.showAggregateButton, false);
+  }
+
+  assert.equal(createQuantityDisplayModel({ ...base, style: 'i' }).sourceTotalLabel, '(4)');
+  assert.equal(createQuantityDisplayModel({ ...base, style: 'g' }).showSourceTotal, true);
+  assert.equal(
+    createQuantityDisplayModel({ ...base, style: 'g', processedCount: 0 }).showSourceTotal,
+    false,
+  );
+  assert.equal(createQuantityDisplayModel({ ...base, style: 'l' }).primaryLabel, '×2');
+});
+
+test('quantity display current and K keep aggregate behavior scoped to aggregate button', () => {
+  const current = createQuantityDisplayModel({
+    style: 'current',
+    quantityMode: 'progress',
+    processedCount: 2,
+    totalQuantity: 4,
+    aggregateTotalQuantity: 9,
+    hasAggregate: true,
+    showAggregate: true,
+  });
+  const k = createQuantityDisplayModel({
+    style: 'k',
+    quantityMode: 'progress',
+    processedCount: 2,
+    totalQuantity: 4,
+    aggregateTotalQuantity: 9,
+    hasAggregate: true,
+    showAggregate: true,
+  });
+
+  assert.equal(current.primaryLabel, '2/4');
+  assert.equal(current.aggregateLabel, '9');
+  assert.equal(current.showAggregateButton, true);
+  assert.equal(k.primaryLabel, '2/4');
+  assert.equal(k.aggregateLabel, '9');
+  assert.equal(k.showAggregateButton, true);
+  assert.equal(
+    createQuantityDisplayModel({
+      style: 'k',
+      quantityMode: 'progress',
+      processedCount: 2,
+      totalQuantity: 4,
+      aggregateTotalQuantity: 9,
+      hasAggregate: true,
+      showAggregate: false,
+    }).showAggregateButton,
+    false,
+  );
+});
+
+test('quantity display right group keeps CSS placement contracts', () => {
   assert.match(
     styleCss,
-    /\.quantity-style-b \.order-item-quantity,\n\.quantity-style-b \.aggregate-quantity-button \{[^}]*background: #ffffff;/s,
+    /\.quantity-side-right \{[^}]*grid-template-columns: minmax\(0, 1fr\) minmax\(54px, auto\);/s,
   );
   assert.match(
     styleCss,
-    /\.quantity-style-b \.aggregate-quantity-button \{[^}]*color: #111827;[^}]*box-shadow: none;/s,
+    /\.order-item-quantity-group \{[^}]*grid-column: 2;[^}]*justify-self: end;/s,
   );
   assert.match(
     styleCss,
-    /\.quantity-style-j \.order-item-quantity,\n\.quantity-style-j \.aggregate-quantity-button \{[^}]*grid-column: 1;[^}]*grid-row: 1;/s,
+    /\.quantity-group-j \.order-item-source-quantity \{[^}]*grid-row: 1;[^}]*height: 16px;/s,
   );
   assert.match(
     styleCss,
-    /\.quantity-style-j \.aggregate-quantity-button \{[^}]*align-self: start;[^}]*box-shadow: none;/s,
+    /\.quantity-group-j \.order-item-quantity \{[^}]*grid-row: 2;[^}]*height: 24px;/s,
   );
   assert.match(
     styleCss,
-    /\.quantity-style-j \.order-item-quantity \{[^}]*align-self: end;[^}]*margin-top: 0;/s,
+    /\.comparison-quantity-style-preview \.quantity-group-j \.sample-main \{[^}]*grid-row: 2;/s,
   );
   assert.match(
     styleCss,
-    /\.comparison-quantity-style-preview \.quantity-style-j \.sample-main \{[^}]*grid-row: 2;/s,
+    /\.comparison-quantity-style-preview \.quantity-group-j \.sample-total \{[^}]*grid-row: 1;/s,
   );
   assert.match(
     styleCss,
-    /\.comparison-quantity-style-preview \.quantity-style-j \.sample-total \{[^}]*grid-row: 1;/s,
+    /\.comparison-quantity-style-preview \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(168px, 1fr\)\);/s,
   );
 });
 
 test('quantity display row keeps button and aggregate DOM contracts', () => {
   assert.match(orderItemRowVue, /\[`quantity-style-\$\{quantityDisplayStyle\}`\]: true,/);
-  assert.match(orderItemRowVue, /'has-aggregate-quantity': showAggregateQuantity,/);
+  assert.match(orderItemRowVue, /'quantity-side-right': quantityDisplay\.isRightAligned,/);
+  assert.match(orderItemRowVue, /'has-aggregate-quantity': quantityDisplay\.showAggregateButton,/);
   assert.match(
     orderItemRowVue,
     /class="order-item-quantity"[\s\S]*:disabled="interactionsDisabled"[\s\S]*:aria-label="`\$\{displayName\}の調理数を変更`"[\s\S]*@click\.stop="\$emit\('toggle-item-action', orderItem\.order_item_id\)"/,
+  );
+  assert.match(
+    orderItemRowVue,
+    /class="order-item-source-quantity"[\s\S]*\{\{ quantityDisplay\.sourceTotalLabel \}\}/,
   );
   assert.match(
     orderItemRowVue,

@@ -240,7 +240,7 @@ export const comparisonIntensityOptions = Object.freeze([
 
 export const comparisonQuantityDisplayStyleOptions = Object.freeze([
   Object.freeze({ id: 'current', label: '現行の左主数量 + 右全注文集計' }),
-  Object.freeze({ id: 'a', label: 'A 主数量のみ' }),
+  Object.freeze({ id: 'a', label: 'A 残数量のみ' }),
   Object.freeze({ id: 'b', label: 'B 独立2チップ' }),
   Object.freeze({ id: 'c', label: 'C 強弱つき2チップ' }),
   Object.freeze({ id: 'd', label: 'D 大小・右下配置' }),
@@ -248,8 +248,10 @@ export const comparisonQuantityDisplayStyleOptions = Object.freeze([
   Object.freeze({ id: 'f', label: 'F チップ＋補助数値' }),
   Object.freeze({ id: 'g', label: 'G 差分時のみ合計' }),
   Object.freeze({ id: 'h', label: 'H 塗り＋アウトライン' }),
-  Object.freeze({ id: 'i', label: 'I 主数量＋括弧合計' }),
+  Object.freeze({ id: 'i', label: 'I 残＋括弧合計' }),
   Object.freeze({ id: 'j', label: 'J 縦積み・合計上小' }),
+  Object.freeze({ id: 'k', label: 'K 右側・主数量＋横断集計' }),
+  Object.freeze({ id: 'l', label: 'L 右側・×残数量' }),
 ]);
 
 export const comparisonLabels = Object.freeze({
