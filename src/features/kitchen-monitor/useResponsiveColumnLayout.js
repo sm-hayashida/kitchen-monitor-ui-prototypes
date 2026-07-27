@@ -1,11 +1,40 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, toValue, watch } from 'vue';
 
+export function measureResponsiveColumnLayout(
+  widthElement,
+  {
+    columnGap = 14,
+    contentInset = 0,
+    heightElement = widthElement,
+    maxColumnCount = 3,
+    minColumnHeight = 260,
+    minColumnWidth = 290,
+    navigationElement,
+    reservedHeight = 0,
+  } = {},
+) {
+  const navigationHeight = Math.max(
+    reservedHeight,
+    navigationElement?.getBoundingClientRect().height ?? 0,
+  );
+  const measuredHeight = Math.floor(heightElement.clientHeight - navigationHeight - contentInset);
+  const measuredColumnCount = Math.floor(
+    (widthElement.clientWidth + columnGap) / (minColumnWidth + columnGap),
+  );
+
+  return {
+    columnHeight: measuredHeight > 0 ? measuredHeight : minColumnHeight,
+    columnCount: Math.min(maxColumnCount, Math.max(1, measuredColumnCount)),
+  };
+}
+
 export function useResponsiveColumnLayout(
   targetRef,
   {
     columnGap = 14,
     contentInset = 0,
     fallbackColumnHeight = 410,
+    heightTargetRef = targetRef,
     maxColumnCount = 3,
     minColumnHeight = 260,
     minColumnWidth = 290,
@@ -18,6 +47,7 @@ export function useResponsiveColumnLayout(
   let resizeObserver;
   let measureFrame;
   let settleFrame;
+  let observedHeightElement;
   let observedNavigation;
 
   function measure() {
@@ -28,8 +58,9 @@ export function useResponsiveColumnLayout(
     measureFrame = requestAnimationFrame(() => {
       measureFrame = undefined;
       const element = targetRef.value;
+      const heightElement = toValue(heightTargetRef) ?? element;
 
-      if (!element) {
+      if (!element || !heightElement) {
         return;
       }
 
@@ -45,17 +76,29 @@ export function useResponsiveColumnLayout(
         observedNavigation = navigation;
       }
 
-      const navigationHeight = Math.max(
-        reservedHeight,
-        navigation?.getBoundingClientRect().height ?? 0,
-      );
-      const measuredHeight = Math.floor(element.clientHeight - navigationHeight - contentInset);
-      const measuredColumnCount = Math.floor(
-        (element.clientWidth + columnGap) / (toValue(minColumnWidth) + columnGap),
-      );
+      if (heightElement !== observedHeightElement) {
+        if (observedHeightElement && observedHeightElement !== element) {
+          resizeObserver?.unobserve(observedHeightElement);
+        }
+        observedHeightElement = heightElement;
+        if (observedHeightElement !== element) {
+          resizeObserver?.observe(observedHeightElement);
+        }
+      }
 
-      columnHeight.value = measuredHeight > 0 ? measuredHeight : minColumnHeight;
-      columnCount.value = Math.min(maxColumnCount, Math.max(1, measuredColumnCount));
+      const nextLayout = measureResponsiveColumnLayout(element, {
+        columnGap,
+        contentInset: toValue(contentInset),
+        heightElement,
+        maxColumnCount,
+        minColumnHeight,
+        minColumnWidth: toValue(minColumnWidth),
+        navigationElement: navigation,
+        reservedHeight: toValue(reservedHeight),
+      });
+
+      columnHeight.value = nextLayout.columnHeight;
+      columnCount.value = nextLayout.columnCount;
       isLayoutReady.value = true;
     });
   }
@@ -81,7 +124,12 @@ export function useResponsiveColumnLayout(
   });
 
   watch(
-    () => toValue(minColumnWidth),
+    () => [
+      toValue(contentInset),
+      toValue(heightTargetRef),
+      toValue(minColumnWidth),
+      toValue(reservedHeight),
+    ],
     () => {
       isLayoutReady.value = false;
       measure();

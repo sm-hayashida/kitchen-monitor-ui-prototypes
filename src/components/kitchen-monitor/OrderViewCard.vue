@@ -53,8 +53,12 @@ const showBulkComplete = computed(() => comparison.enabledInfo.value.has('bulkCo
 const isUndoable = computed(() => Boolean(props.completionStartedAt));
 const sourceOrderId = computed(() => props.order.source_order_id ?? props.order.id);
 const segmentIndex = computed(() => props.order.segment_index ?? 1);
+const segmentCount = computed(() => props.order.segment_count ?? 1);
 const isContinuation = computed(() => segmentIndex.value > 1);
 const isLastSegment = computed(() => props.order.is_last_segment ?? true);
+const continuationLabel = computed(() =>
+  `${props.order.table_no} 続き ${segmentIndex.value}/${segmentCount.value}`,
+);
 const hasOpenItemAction = computed(() =>
   props.order.items.some(
     (orderItem) => orderItem.order_item_id === props.activeItemActionId,
@@ -99,6 +103,11 @@ const hasOpenItemAction = computed(() =>
           {{ timingStatus.label }}
         </span>
       </div>
+      <small>{{ sourceOrderId }}</small>
+    </header>
+
+    <header v-else class="order-continuation-head">
+      <strong>{{ continuationLabel }}</strong>
       <small>{{ sourceOrderId }}</small>
     </header>
 

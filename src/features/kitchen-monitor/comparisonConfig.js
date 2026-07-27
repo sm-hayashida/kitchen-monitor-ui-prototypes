@@ -14,6 +14,7 @@ export const comparisonDefaults = Object.freeze({
   cardMinWidth: 290,
   rowSpacing: 'standard',
   quantityMode: 'current',
+  quantityDisplayStyle: 'current',
   orderUndoMs: 3000,
   itemHideMs: 5000,
   targetMinutes: 15,
@@ -56,10 +57,10 @@ export const comparisonRecipes = Object.freeze({
     group: 'display',
     label: '一覧性優先',
     purpose: '多くの注文を一度に確認',
-    effectSummary: '290px・詰める・メモ非表示',
+    effectSummary: '260px・詰める・コース/集計/完了',
     settings: {
       scenario: 'normal',
-      cardMinWidth: 290,
+      cardMinWidth: 260,
       rowSpacing: 'compact',
       quantityMode: 'current',
       orderUndoMs: 3000,
@@ -67,7 +68,7 @@ export const comparisonRecipes = Object.freeze({
       targetMinutes: 15,
       warningMinutes: 3,
       motion: true,
-      info: Object.freeze(['course', 'options', 'aggregate', 'bulkComplete']),
+      info: Object.freeze(['course', 'aggregate', 'bulkComplete']),
     },
   }),
   readable: createRecipe({
@@ -237,6 +238,20 @@ export const comparisonIntensityOptions = Object.freeze([
   Object.freeze({ id: 'strong', label: '強調' }),
 ]);
 
+export const comparisonQuantityDisplayStyleOptions = Object.freeze([
+  Object.freeze({ id: 'current', label: '現行の左主数量 + 右全注文集計' }),
+  Object.freeze({ id: 'a', label: 'A 主数量のみ' }),
+  Object.freeze({ id: 'b', label: 'B 独立2チップ' }),
+  Object.freeze({ id: 'c', label: 'C 強弱つき2チップ' }),
+  Object.freeze({ id: 'd', label: 'D 大小・右下配置' }),
+  Object.freeze({ id: 'e', label: 'E 区切りコンテナ' }),
+  Object.freeze({ id: 'f', label: 'F チップ＋補助数値' }),
+  Object.freeze({ id: 'g', label: 'G 差分時のみ合計' }),
+  Object.freeze({ id: 'h', label: 'H 塗り＋アウトライン' }),
+  Object.freeze({ id: 'i', label: 'I 主数量＋括弧合計' }),
+  Object.freeze({ id: 'j', label: 'J 縦積み・合計上小' }),
+]);
+
 export const comparisonLabels = Object.freeze({
   scenarios: Object.freeze({
     normal: '通常',
@@ -256,6 +271,11 @@ export const comparisonLabels = Object.freeze({
     remaining: '残数',
     progress: '進捗',
   }),
+  quantityDisplayStyles: Object.freeze(
+    Object.fromEntries(
+      comparisonQuantityDisplayStyleOptions.map((option) => [option.id, option.label]),
+    ),
+  ),
   info: Object.freeze({
     course: 'コース',
     options: 'オプション',
@@ -272,9 +292,12 @@ export const comparisonLabels = Object.freeze({
 
 export const comparisonOptions = Object.freeze({
   scenarios: Object.freeze(['normal', 'peak', 'long', 'quantity', 'memo', 'delay']),
-  cardMinWidths: Object.freeze([290, 320, 360]),
+  cardMinWidths: Object.freeze([260, 290, 320, 360]),
   rowSpacings: Object.freeze(['compact', 'standard', 'comfortable']),
   quantityModes: Object.freeze(['current', 'remaining', 'progress']),
+  quantityDisplayStyles: Object.freeze(
+    comparisonQuantityDisplayStyleOptions.map((option) => option.id),
+  ),
   orderUndoMs: Object.freeze([0, 2000, 3000, 5000]),
   itemHideMs: Object.freeze([0, 3000, 5000, 8000]),
   targetMinutes: Object.freeze([10, 15, 20, 30]),
@@ -289,6 +312,7 @@ export const comparisonQueryKeys = Object.freeze({
   cardMinWidth: 'cmp_card',
   rowSpacing: 'cmp_rows',
   quantityMode: 'cmp_qty',
+  quantityDisplayStyle: 'cmp_qty_style',
   orderUndoMs: 'cmp_order_undo',
   itemHideMs: 'cmp_item_hide',
   targetMinutes: 'cmp_target',
@@ -318,6 +342,7 @@ const differenceFieldLabels = Object.freeze({
   cardMinWidth: 'カード幅',
   rowSpacing: '行間',
   quantityMode: '数量',
+  quantityDisplayStyle: '数量表示',
   orderUndoMs: '注文取消',
   itemHideMs: '商品非表示',
   targetMinutes: '目標',
@@ -353,6 +378,11 @@ export function normalizeComparisonSettings(candidate = {}) {
       candidate.quantityMode,
       comparisonOptions.quantityModes,
       comparisonDefaults.quantityMode,
+    ),
+    quantityDisplayStyle: enumValue(
+      candidate.quantityDisplayStyle,
+      comparisonOptions.quantityDisplayStyles,
+      comparisonDefaults.quantityDisplayStyle,
     ),
     orderUndoMs: numberValue(
       candidate.orderUndoMs,
@@ -446,6 +476,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   assignNumber(candidate, 'cardMinWidth', params.get(comparisonQueryKeys.cardMinWidth));
   assignString(candidate, 'rowSpacing', params.get(comparisonQueryKeys.rowSpacing));
   assignString(candidate, 'quantityMode', params.get(comparisonQueryKeys.quantityMode));
+  assignString(candidate, 'quantityDisplayStyle', params.get(comparisonQueryKeys.quantityDisplayStyle));
   assignNumber(candidate, 'orderUndoMs', params.get(comparisonQueryKeys.orderUndoMs));
   assignNumber(candidate, 'itemHideMs', params.get(comparisonQueryKeys.itemHideMs));
   assignNumber(candidate, 'targetMinutes', params.get(comparisonQueryKeys.targetMinutes));
@@ -488,6 +519,13 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
     comparisonQueryKeys.quantityMode,
     normalized.quantityMode,
     comparisonDefaults.quantityMode,
+    options,
+  );
+  appendSetting(
+    params,
+    comparisonQueryKeys.quantityDisplayStyle,
+    normalized.quantityDisplayStyle,
+    comparisonDefaults.quantityDisplayStyle,
     options,
   );
   appendSetting(params, comparisonQueryKeys.orderUndoMs, normalized.orderUndoMs, comparisonDefaults.orderUndoMs, options);
@@ -618,6 +656,9 @@ function getComparisonValueLabel(key, value) {
   }
   if (key === 'quantityMode') {
     return comparisonLabels.quantityModes[value];
+  }
+  if (key === 'quantityDisplayStyle') {
+    return comparisonLabels.quantityDisplayStyles[value];
   }
   if (key === 'orderUndoMs' || key === 'itemHideMs') {
     return `${value / 1000}秒`;

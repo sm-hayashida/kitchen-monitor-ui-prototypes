@@ -75,6 +75,9 @@ const itemTransitionName = computed(() =>
   comparison.settings.motion ? 'table-item' : '',
 );
 const isContinuation = computed(() => props.table.segment_index > 1);
+const continuationLabel = computed(() =>
+  `${props.table.table_no} 続き ${props.table.segment_index}/${props.table.segment_count}`,
+);
 const timingStatus = computed(() =>
   getOrderTimingStatus(props.table.earliest_elapsed_minutes, timingOptions.value),
 );
@@ -171,6 +174,11 @@ function orderGroupTiming(orderGroup) {
           </button>
         </template>
       </div>
+    </header>
+
+    <header v-else class="order-continuation-head table-continuation-head">
+      <strong>{{ continuationLabel }}</strong>
+      <small>{{ table.orders.length }}注文</small>
     </header>
 
     <div class="table-order-groups">

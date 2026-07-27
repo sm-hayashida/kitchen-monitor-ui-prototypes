@@ -1,7 +1,10 @@
 <script setup>
 import { ListFilter } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
-import { createOrderCardSegments } from '../../features/kitchen-monitor/orderCardSegments';
+import {
+  createOrderCardSegments,
+  estimateOrderCardHeight,
+} from '../../features/kitchen-monitor/orderCardSegments';
 import { createOrderedMasonryPages } from '../../features/kitchen-monitor/orderMasonryLayout';
 import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
@@ -32,6 +35,7 @@ defineEmits(['switch-view']);
 const currentPage = ref(1);
 const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
+const layoutScrollRef = ref(null);
 const comparison = useComparisonStore();
 const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
 const comparisonPageClass = computed(() => [
@@ -42,12 +46,28 @@ const comparisonPageClass = computed(() => [
 const cardTransitionName = computed(() =>
   comparison.settings.motion ? 'masonry-card' : '',
 );
+const cardEstimateOptions = computed(() => ({
+  cardMinWidth: comparison.settings.cardMinWidth,
+  rowSpacing: comparison.settings.rowSpacing,
+  visibleInfo: comparison.settings.info,
+}));
 const isPaged = computed(() => props.layout === 'n-paged');
 const isScroll = computed(() => props.layout === 'n-scroll');
+const layoutHeightTargetRef = computed(() =>
+  props.layout === 'z' ? layoutScrollRef.value : layoutBodyRef.value,
+);
+const layoutContentInset = computed(() => {
+  if (props.layout === 'z') {
+    return 26;
+  }
+  return props.layout === 'n-scroll' ? 8 : 0;
+});
+const layoutReservedHeight = computed(() => (props.layout === 'n-scroll' ? 44 : 0));
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
-  contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  contentInset: layoutContentInset,
+  heightTargetRef: layoutHeightTargetRef,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
-  reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
+  reservedHeight: layoutReservedHeight,
 });
 
 const {
@@ -98,11 +118,13 @@ const departmentFilteredOrders = computed(() =>
 const layoutOrders = computed(() =>
   createOrderCardSegments(departmentFilteredOrders.value, props.layout, {
     maxCardHeight: columnHeight.value,
+    estimateOptions: cardEstimateOptions.value,
   }),
 );
 const pagedOrderColumns = computed(() =>
   createOrderedMasonryPages(layoutOrders.value, {
     columnCount: columnCount.value,
+    estimateCardHeight: (order) => estimateOrderCardHeight(order, cardEstimateOptions.value),
     maxColumnHeight: columnHeight.value,
   }),
 );
@@ -171,6 +193,7 @@ function saveDepartmentSettings(departmentIds) {
     </template>
 
     <div
+      ref="layoutScrollRef"
       class="order-view-scroll"
       :class="`order-layout-${layout}`"
       @click="closeItemAction"
