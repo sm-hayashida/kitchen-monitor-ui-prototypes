@@ -14,6 +14,7 @@ import {
   getActiveComparisonRecipe,
   getComparisonDifferenceSummary,
 } from '../../features/kitchen-monitor/comparisonConfig';
+import { createQuantityDisplayModel } from '../../features/kitchen-monitor/quantityDisplay';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { viewModeGroups } from '../../features/kitchen-monitor/viewModeOptions';
 
@@ -52,6 +53,15 @@ const quantityPreviewSamples = computed(() =>
   comparisonQuantityDisplayStyleOptions.map((option) => ({
     ...option,
     active: comparison.settings.quantityDisplayStyle === option.id,
+    display: createQuantityDisplayModel({
+      style: option.id,
+      quantityMode: 'current',
+      processedCount: 2,
+      totalQuantity: 4,
+      aggregateTotalQuantity: 4,
+      hasAggregate: true,
+      showAggregate: true,
+    }),
   })),
 );
 
@@ -281,17 +291,22 @@ async function copyShareUrl() {
             type="button"
             :class="[
               `quantity-style-${style.id}`,
+              style.display.groupClass,
               { active: style.active },
             ]"
             @click="comparison.setField('quantityDisplayStyle', style.id)"
           >
             <strong>{{ style.label }}</strong>
             <span class="quantity-style-sample">
-              <i class="sample-main">3</i>
+              <i class="sample-main">{{ style.display.primaryLabel }}</i>
               <i
-                v-if="style.id !== 'a'"
+                v-if="style.display.showSourceTotal || style.display.showAggregateButton"
                 class="sample-total"
-              >{{ style.id === 'i' ? '(8)' : '8' }}</i>
+              >
+                {{ style.display.showSourceTotal
+                  ? style.display.sourceTotalLabel
+                  : style.display.aggregateLabel }}
+              </i>
             </span>
           </button>
         </div>
