@@ -26,6 +26,9 @@ export function createComparisonStore(initialHash = window.location.hash) {
     settings.warningMinutes,
     settings.motion ? 'motion-on' : 'motion-off',
     settings.info.join(','),
+    settings.theme,
+    settings.urgency,
+    settings.intensity,
   ].join('|'));
 
   function replaceSettings(nextSettings) {

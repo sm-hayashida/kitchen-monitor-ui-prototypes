@@ -3,8 +3,15 @@ import { Check, Clipboard, RotateCcw, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import {
   comparisonInfoKeys,
+  comparisonIntensityOptions,
+  comparisonLabels,
   comparisonOptions,
-  comparisonPresets,
+  comparisonRecipeGroups,
+  comparisonRecipes,
+  comparisonThemeOptions,
+  comparisonUrgencyOptions,
+  getActiveComparisonRecipe,
+  getComparisonDifferenceSummary,
 } from '../../features/kitchen-monitor/comparisonConfig';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { viewModeGroups } from '../../features/kitchen-monitor/viewModeOptions';
@@ -21,63 +28,25 @@ const comparison = useComparisonStore();
 const copied = ref(false);
 let copiedTimer;
 
-const scenarioLabels = {
-  normal: '通常',
-  peak: 'ピーク',
-  long: '長い注文',
-  quantity: '数量多め',
-  memo: 'メモ多め',
-  delay: '遅延',
-};
-const rowLabels = {
-  compact: '詰める',
-  standard: '標準',
-  comfortable: '広め',
-};
-const quantityLabels = {
-  current: '現行',
-  remaining: '残数',
-  progress: '進捗',
-};
-const infoLabels = {
-  course: 'コース',
-  options: 'オプション',
-  itemMemo: '商品メモ',
-  orderMemo: '注文メモ',
-  aggregate: '横断集計',
-  bulkComplete: '注文完了',
-};
-const presetLabels = {
-  current: '現行値',
-  dense: '高密度',
-  comfortable: 'ゆったり',
-  careful: '慎重',
-  instant: '即時',
-  peak: 'ピーク',
-};
-
 const isOpen = computed(() => comparison.isPanelOpen.value);
-const selectedPreset = computed(() =>
-  Object.entries(comparisonPresets).find(([presetId, preset]) => {
-    if (presetId === 'current') {
-      return isCurrentDefaults.value;
-    }
-    return Object.entries(preset).every(([key, value]) => comparison.settings[key] === value);
-  })?.[0] ?? '',
+const selectedRecipe = computed(() => getActiveComparisonRecipe(comparison.settings));
+const differenceSummary = computed(() => getComparisonDifferenceSummary(comparison.settings));
+const groupedRecipes = computed(() =>
+  comparisonRecipeGroups.map((group) => ({
+    ...group,
+    recipes: Object.entries(comparisonRecipes)
+      .filter(([, recipe]) => recipe.group === group.id)
+      .map(([id, recipe]) => ({ id, ...recipe })),
+  })),
 );
-const isCurrentDefaults = computed(() =>
-  comparison.settings.scenario === 'normal' &&
-  comparison.settings.cardMinWidth === 290 &&
-  comparison.settings.rowSpacing === 'standard' &&
-  comparison.settings.quantityMode === 'current' &&
-  comparison.settings.orderUndoMs === 3000 &&
-  comparison.settings.itemHideMs === 5000 &&
-  comparison.settings.targetMinutes === 15 &&
-  comparison.settings.warningMinutes === 3 &&
-  comparison.settings.motion &&
-  comparison.settings.info.length === comparisonInfoKeys.length &&
-  comparisonInfoKeys.every((key) => comparison.settings.info.includes(key)),
-);
+
+const colorPreviewSamples = [
+  { id: 'normal', label: '通常' },
+  { id: 'warning', label: '期限間近' },
+  { id: 'overdue', label: '超過' },
+  { id: 'completed', label: '完了' },
+  { id: 'selected', label: '選択中' },
+];
 
 function updateNumber(key, event) {
   comparison.setField(key, Number(event.target.value));
@@ -149,6 +118,21 @@ async function copyShareUrl() {
       </button>
     </header>
 
+    <div class="comparison-status-summary" aria-live="polite">
+      <div>
+        <span>レシピ</span>
+        <strong>{{ differenceSummary.activeRecipeLabel }}</strong>
+      </div>
+      <div>
+        <span>現行との差分</span>
+        <strong>{{ differenceSummary.differenceCount }}件</strong>
+      </div>
+      <div class="comparison-difference-chips">
+        <span v-for="chip in differenceSummary.chips" :key="chip">{{ chip }}</span>
+        <span v-if="differenceSummary.extraCount > 0">ほか{{ differenceSummary.extraCount }}件</span>
+      </div>
+    </div>
+
     <div class="comparison-panel-scroll">
       <section class="comparison-control-section">
         <h3>画面</h3>
@@ -171,17 +155,61 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>プリセット</h3>
-        <div class="comparison-preset-grid">
-          <button
-            v-for="(_preset, presetId) in comparisonPresets"
-            :key="presetId"
-            type="button"
-            :class="{ active: selectedPreset === presetId }"
-            @click="comparison.applyPreset(presetId)"
+        <h3>レシピ</h3>
+        <div class="comparison-recipe-groups">
+          <section v-for="group in groupedRecipes" :key="group.id">
+            <h4>{{ group.label }}</h4>
+            <div class="comparison-recipe-grid">
+              <button
+                v-for="recipe in group.recipes"
+                :key="recipe.id"
+                type="button"
+                :class="{ active: selectedRecipe === recipe.id }"
+                @click="comparison.applyPreset(recipe.id)"
+              >
+                <strong>{{ recipe.label }}</strong>
+                <span>{{ recipe.purpose }}</span>
+                <small>{{ recipe.effectSummary }}</small>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="comparison-control-section">
+        <h3>色</h3>
+        <label>
+          <span>テーマ</span>
+          <select :value="comparison.settings.theme" @change="updateText('theme', $event)">
+            <option v-for="theme in comparisonThemeOptions" :key="theme.id" :value="theme.id">
+              {{ theme.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>警告配色</span>
+          <select :value="comparison.settings.urgency" @change="updateText('urgency', $event)">
+            <option v-for="urgency in comparisonUrgencyOptions" :key="urgency.id" :value="urgency.id">
+              {{ urgency.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>強度</span>
+          <select :value="comparison.settings.intensity" @change="updateText('intensity', $event)">
+            <option v-for="intensity in comparisonIntensityOptions" :key="intensity.id" :value="intensity.id">
+              {{ intensity.label }}
+            </option>
+          </select>
+        </label>
+        <div class="comparison-color-preview" aria-label="色サンプル">
+          <span
+            v-for="sample in colorPreviewSamples"
+            :key="sample.id"
+            :class="`sample-${sample.id}`"
           >
-            {{ presetLabels[presetId] }}
-          </button>
+            {{ sample.label }}
+          </span>
         </div>
       </section>
 
@@ -189,7 +217,7 @@ async function copyShareUrl() {
         <h3>シナリオ</h3>
         <select :value="comparison.settings.scenario" @change="updateText('scenario', $event)">
           <option v-for="scenario in comparisonOptions.scenarios" :key="scenario" :value="scenario">
-            {{ scenarioLabels[scenario] }}
+            {{ comparisonLabels.scenarios[scenario] }}
           </option>
         </select>
       </section>
@@ -208,7 +236,7 @@ async function copyShareUrl() {
           <span>行間</span>
           <select :value="comparison.settings.rowSpacing" @change="updateText('rowSpacing', $event)">
             <option v-for="rowSpacing in comparisonOptions.rowSpacings" :key="rowSpacing" :value="rowSpacing">
-              {{ rowLabels[rowSpacing] }}
+              {{ comparisonLabels.rowSpacings[rowSpacing] }}
             </option>
           </select>
         </label>
@@ -220,7 +248,7 @@ async function copyShareUrl() {
           <span>数量</span>
           <select :value="comparison.settings.quantityMode" @change="updateText('quantityMode', $event)">
             <option v-for="mode in comparisonOptions.quantityModes" :key="mode" :value="mode">
-              {{ quantityLabels[mode] }}
+              {{ comparisonLabels.quantityModes[mode] }}
             </option>
           </select>
         </label>
@@ -231,7 +259,7 @@ async function copyShareUrl() {
               :checked="comparison.settings.info.includes(key)"
               @change="comparison.toggleInfo(key)"
             />
-            <span>{{ infoLabels[key] }}</span>
+            <span>{{ comparisonLabels.info[key] }}</span>
           </label>
         </div>
       </section>

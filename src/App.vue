@@ -26,6 +26,12 @@ const activePage = computed(() => pages[activeView.value] ?? pages[defaultView])
 const comparison = createComparisonStore(window.location.hash);
 provideComparisonStore(comparison);
 const activePageKey = computed(() => `${activeView.value}:${comparison.settings.scenario}`);
+const comparisonTokenClasses = computed(() => [
+  'comparison-token-root',
+  `comparison-theme-${comparison.settings.theme}`,
+  `comparison-urgency-${comparison.settings.urgency}`,
+  `comparison-intensity-${comparison.settings.intensity}`,
+]);
 let isSyncingHash = false;
 
 function resolveView() {
@@ -62,11 +68,13 @@ watch(
 </script>
 
 <template>
-  <component
-    :is="activePage"
-    :key="activePageKey"
-    :active-view="activeView"
-    @switch-view="switchView"
-  />
-  <ComparisonPanel :active-view="activeView" @switch-view="switchView" />
+  <div :class="comparisonTokenClasses">
+    <component
+      :is="activePage"
+      :key="activePageKey"
+      :active-view="activeView"
+      @switch-view="switchView"
+    />
+    <ComparisonPanel :active-view="activeView" @switch-view="switchView" />
+  </div>
 </template>
