@@ -7,6 +7,8 @@ export const comparisonInfoKeys = [
   'bulkComplete',
 ];
 
+const fullInfo = Object.freeze([...comparisonInfoKeys]);
+
 export const comparisonDefaults = Object.freeze({
   scenario: 'normal',
   cardMinWidth: 290,
@@ -17,16 +19,255 @@ export const comparisonDefaults = Object.freeze({
   targetMinutes: 15,
   warningMinutes: 3,
   motion: true,
-  info: Object.freeze([...comparisonInfoKeys]),
+  info: fullInfo,
+  theme: 'orange',
+  urgency: 'standard',
+  intensity: 'standard',
 });
 
-export const comparisonPresets = Object.freeze({
-  current: Object.freeze({ ...comparisonDefaults, info: [...comparisonDefaults.info] }),
-  dense: Object.freeze({ cardMinWidth: 290, rowSpacing: 'compact' }),
-  comfortable: Object.freeze({ cardMinWidth: 360, rowSpacing: 'comfortable' }),
-  careful: Object.freeze({ orderUndoMs: 5000, itemHideMs: 8000 }),
-  instant: Object.freeze({ orderUndoMs: 0, itemHideMs: 0 }),
-  peak: Object.freeze({ scenario: 'peak', cardMinWidth: 290, rowSpacing: 'compact' }),
+export const comparisonRecipeGroups = Object.freeze([
+  Object.freeze({ id: 'display', label: '表示' }),
+  Object.freeze({ id: 'operation', label: '運用' }),
+  Object.freeze({ id: 'situation', label: '状況' }),
+]);
+
+const allCurrentRecipeFields = Object.freeze({
+  scenario: 'normal',
+  cardMinWidth: 290,
+  rowSpacing: 'standard',
+  quantityMode: 'current',
+  orderUndoMs: 3000,
+  itemHideMs: 5000,
+  targetMinutes: 15,
+  warningMinutes: 3,
+  motion: true,
+  info: fullInfo,
+});
+
+export const comparisonRecipes = Object.freeze({
+  current: createRecipe({
+    group: 'display',
+    label: '現行基準',
+    purpose: '現行仕様を確認',
+    effectSummary: '290px・標準・全情報',
+    settings: allCurrentRecipeFields,
+  }),
+  overview: createRecipe({
+    group: 'display',
+    label: '一覧性優先',
+    purpose: '多くの注文を一度に確認',
+    effectSummary: '290px・詰める・メモ非表示',
+    settings: {
+      scenario: 'normal',
+      cardMinWidth: 290,
+      rowSpacing: 'compact',
+      quantityMode: 'current',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: Object.freeze(['course', 'options', 'aggregate', 'bulkComplete']),
+    },
+  }),
+  readable: createRecipe({
+    group: 'display',
+    label: '読みやすさ優先',
+    purpose: '誤読しにくい余白を確認',
+    effectSummary: '360px・広め・全情報',
+    settings: {
+      scenario: 'normal',
+      cardMinWidth: 360,
+      rowSpacing: 'comfortable',
+      quantityMode: 'current',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  minimal: createRecipe({
+    group: 'display',
+    label: '情報最小',
+    purpose: '必須情報だけを検討',
+    effectSummary: '320px・標準・集計と完了のみ',
+    settings: {
+      scenario: 'normal',
+      cardMinWidth: 320,
+      rowSpacing: 'standard',
+      quantityMode: 'current',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: Object.freeze(['aggregate', 'bulkComplete']),
+    },
+  }),
+  maximum: createRecipe({
+    group: 'display',
+    label: '情報最大',
+    purpose: '長いカードと情報量を確認',
+    effectSummary: 'メモ多め・360px・広め',
+    settings: {
+      scenario: 'memo',
+      cardMinWidth: 360,
+      rowSpacing: 'comfortable',
+      quantityMode: 'current',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  careful: createRecipe({
+    group: 'operation',
+    label: '誤操作防止',
+    purpose: '取消可能時間を長くする',
+    effectSummary: '320px・注文5秒・商品8秒',
+    settings: {
+      scenario: 'normal',
+      cardMinWidth: 320,
+      rowSpacing: 'standard',
+      quantityMode: 'current',
+      orderUndoMs: 5000,
+      itemHideMs: 8000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  instant: createRecipe({
+    group: 'operation',
+    label: '高速運用',
+    purpose: '完了を即時反映する',
+    effectSummary: '290px・詰める・取消0秒',
+    settings: {
+      scenario: 'normal',
+      cardMinWidth: 290,
+      rowSpacing: 'compact',
+      quantityMode: 'current',
+      orderUndoMs: 0,
+      itemHideMs: 0,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  peak: createRecipe({
+    group: 'situation',
+    label: 'ピーク確認',
+    purpose: '多数注文時の一覧性を確認',
+    effectSummary: 'ピーク・290px・詰める',
+    settings: {
+      scenario: 'peak',
+      cardMinWidth: 290,
+      rowSpacing: 'compact',
+      quantityMode: 'current',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  delay: createRecipe({
+    group: 'situation',
+    label: '遅延監視',
+    purpose: '警告・超過が多い状態を確認',
+    effectSummary: '遅延・320px・期限間近5分',
+    settings: {
+      scenario: 'delay',
+      cardMinWidth: 320,
+      rowSpacing: 'standard',
+      quantityMode: 'current',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 5,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  quantity: createRecipe({
+    group: 'situation',
+    label: '数量処理',
+    purpose: '多数商品の進捗表現を確認',
+    effectSummary: '数量多め・320px・進捗',
+    settings: {
+      scenario: 'quantity',
+      cardMinWidth: 320,
+      rowSpacing: 'compact',
+      quantityMode: 'progress',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+});
+
+export const comparisonThemeOptions = Object.freeze([
+  Object.freeze({ id: 'orange', label: '現行オレンジ', intent: 'Current baseline' }),
+  Object.freeze({ id: 'blue', label: 'ブルー', intent: 'Calm cool accent' }),
+  Object.freeze({ id: 'teal', label: 'ティール', intent: 'Fresh operational accent' }),
+  Object.freeze({ id: 'violet', label: 'バイオレット', intent: 'Distinct review variant' }),
+  Object.freeze({ id: 'charcoal', label: 'チャコール', intent: 'Low-chroma dark accent on light surfaces' }),
+]);
+
+export const comparisonUrgencyOptions = Object.freeze([
+  Object.freeze({ id: 'standard', label: '標準', intent: 'Current red/yellow baseline' }),
+  Object.freeze({ id: 'highContrast', label: '高コントラスト', intent: 'Stronger border/text distinction' }),
+  Object.freeze({ id: 'colorSafe', label: '色覚多様性対応', intent: 'Blue/purple-safe distinction plus labels' }),
+  Object.freeze({ id: 'monochrome', label: 'モノクロ', intent: 'Light/dark contrast with text and icon emphasis' }),
+]);
+
+export const comparisonIntensityOptions = Object.freeze([
+  Object.freeze({ id: 'soft', label: 'ソフト' }),
+  Object.freeze({ id: 'standard', label: '標準' }),
+  Object.freeze({ id: 'strong', label: '強調' }),
+]);
+
+export const comparisonLabels = Object.freeze({
+  scenarios: Object.freeze({
+    normal: '通常',
+    peak: 'ピーク',
+    long: '長い注文',
+    quantity: '数量多め',
+    memo: 'メモ多め',
+    delay: '遅延',
+  }),
+  rowSpacings: Object.freeze({
+    compact: '詰める',
+    standard: '標準',
+    comfortable: '広め',
+  }),
+  quantityModes: Object.freeze({
+    current: '現行',
+    remaining: '残数',
+    progress: '進捗',
+  }),
+  info: Object.freeze({
+    course: 'コース',
+    options: 'オプション',
+    itemMemo: '商品メモ',
+    orderMemo: '注文メモ',
+    aggregate: '横断集計',
+    bulkComplete: '注文完了',
+  }),
+  motion: Object.freeze({
+    true: '動きON',
+    false: '動きOFF',
+  }),
 });
 
 export const comparisonOptions = Object.freeze({
@@ -38,6 +279,9 @@ export const comparisonOptions = Object.freeze({
   itemHideMs: Object.freeze([0, 3000, 5000, 8000]),
   targetMinutes: Object.freeze([10, 15, 20, 30]),
   warningMinutes: Object.freeze([3, 5]),
+  themes: Object.freeze(comparisonThemeOptions.map((option) => option.id)),
+  urgencies: Object.freeze(comparisonUrgencyOptions.map((option) => option.id)),
+  intensities: Object.freeze(comparisonIntensityOptions.map((option) => option.id)),
 });
 
 export const comparisonQueryKeys = Object.freeze({
@@ -51,9 +295,39 @@ export const comparisonQueryKeys = Object.freeze({
   warningMinutes: 'cmp_warning',
   motion: 'cmp_motion',
   info: 'cmp_info',
+  theme: 'cmp_theme',
+  urgency: 'cmp_urgency',
+  intensity: 'cmp_intensity',
 });
 
 const supportedQueryKeys = new Set([...Object.values(comparisonQueryKeys), 'compare']);
+const recipeFieldKeys = Object.freeze([
+  'scenario',
+  'cardMinWidth',
+  'rowSpacing',
+  'quantityMode',
+  'orderUndoMs',
+  'itemHideMs',
+  'targetMinutes',
+  'warningMinutes',
+  'motion',
+  'info',
+]);
+const differenceFieldLabels = Object.freeze({
+  scenario: 'シナリオ',
+  cardMinWidth: 'カード幅',
+  rowSpacing: '行間',
+  quantityMode: '数量',
+  orderUndoMs: '注文取消',
+  itemHideMs: '商品非表示',
+  targetMinutes: '目標',
+  warningMinutes: '期限間近',
+  motion: '動き',
+  info: '表示情報',
+  theme: 'テーマ',
+  urgency: '警告配色',
+  intensity: '強度',
+});
 
 export function createDefaultComparisonSettings() {
   return {
@@ -102,23 +376,55 @@ export function normalizeComparisonSettings(candidate = {}) {
     ),
     motion: typeof candidate.motion === 'boolean' ? candidate.motion : comparisonDefaults.motion,
     info: normalizeInfo(candidate.info),
+    theme: enumValue(candidate.theme, comparisonOptions.themes, comparisonDefaults.theme),
+    urgency: enumValue(candidate.urgency, comparisonOptions.urgencies, comparisonDefaults.urgency),
+    intensity: enumValue(candidate.intensity, comparisonOptions.intensities, comparisonDefaults.intensity),
   };
 }
 
 export function applyComparisonPreset(currentSettings, presetId) {
-  const preset = comparisonPresets[presetId];
-  if (!preset) {
+  const recipe = comparisonRecipes[presetId];
+  if (!recipe) {
     return normalizeComparisonSettings(currentSettings);
-  }
-
-  if (presetId === 'current') {
-    return createDefaultComparisonSettings();
   }
 
   return normalizeComparisonSettings({
     ...currentSettings,
-    ...preset,
+    ...recipe.settings,
+    info: [...recipe.settings.info],
   });
+}
+
+export function getActiveComparisonRecipe(settings) {
+  const normalized = normalizeComparisonSettings(settings);
+  return Object.entries(comparisonRecipes).find(([, recipe]) =>
+    recipeFieldKeys.every((key) => settingsEqual(normalized[key], recipe.settings[key])),
+  )?.[0] ?? 'custom';
+}
+
+export function getComparisonDifferenceSummary(settings) {
+  const normalized = normalizeComparisonSettings(settings);
+  const differences = Object.keys(comparisonQueryKeys)
+    .filter((key) => key !== 'compare' && !settingsEqual(normalized[key], comparisonDefaults[key]))
+    .map((key) => ({
+      key,
+      label: differenceFieldLabels[key],
+      valueLabel: getComparisonValueLabel(key, normalized[key]),
+    }));
+  const activeRecipeId = getActiveComparisonRecipe(normalized);
+  const activeRecipe = comparisonRecipes[activeRecipeId];
+  const chips = differences.slice(0, 3).map((difference) =>
+    `${difference.label}:${difference.valueLabel}`,
+  );
+
+  return {
+    activeRecipeId,
+    activeRecipeLabel: activeRecipe?.label ?? 'カスタム',
+    differenceCount: differences.length,
+    chips,
+    extraCount: Math.max(0, differences.length - chips.length),
+    differences,
+  };
 }
 
 export function parseComparisonHash(hash, routeOptions = {}) {
@@ -146,6 +452,9 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   assignNumber(candidate, 'warningMinutes', params.get(comparisonQueryKeys.warningMinutes));
   candidate.motion = parseMotion(params.get(comparisonQueryKeys.motion));
   candidate.info = parseInfoParam(params.get(comparisonQueryKeys.info));
+  assignString(candidate, 'theme', params.get(comparisonQueryKeys.theme));
+  assignString(candidate, 'urgency', params.get(comparisonQueryKeys.urgency));
+  assignString(candidate, 'intensity', params.get(comparisonQueryKeys.intensity));
 
   return {
     route,
@@ -205,6 +514,9 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
     options,
   );
   appendInfo(params, normalized.info, options);
+  appendSetting(params, comparisonQueryKeys.theme, normalized.theme, comparisonDefaults.theme, options);
+  appendSetting(params, comparisonQueryKeys.urgency, normalized.urgency, comparisonDefaults.urgency, options);
+  appendSetting(params, comparisonQueryKeys.intensity, normalized.intensity, comparisonDefaults.intensity, options);
 
   if (options.openPanel) {
     params.set('compare', '1');
@@ -212,6 +524,16 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
 
   const query = params.toString();
   return `#${route}${query ? `?${query}` : ''}`;
+}
+
+function createRecipe(recipe) {
+  return Object.freeze({
+    ...recipe,
+    settings: Object.freeze({
+      ...recipe.settings,
+      info: Object.freeze([...recipe.settings.info]),
+    }),
+  });
 }
 
 function assignString(candidate, key, value) {
@@ -275,4 +597,48 @@ function appendInfo(params, info, options) {
   if (options.includeDefaults || value !== defaultValue) {
     params.set(comparisonQueryKeys.info, value);
   }
+}
+
+function settingsEqual(left, right) {
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
+  }
+  return left === right;
+}
+
+function getComparisonValueLabel(key, value) {
+  if (key === 'scenario') {
+    return comparisonLabels.scenarios[value];
+  }
+  if (key === 'cardMinWidth') {
+    return `${value}px`;
+  }
+  if (key === 'rowSpacing') {
+    return comparisonLabels.rowSpacings[value];
+  }
+  if (key === 'quantityMode') {
+    return comparisonLabels.quantityModes[value];
+  }
+  if (key === 'orderUndoMs' || key === 'itemHideMs') {
+    return `${value / 1000}秒`;
+  }
+  if (key === 'targetMinutes' || key === 'warningMinutes') {
+    return `${value}分`;
+  }
+  if (key === 'motion') {
+    return comparisonLabels.motion[String(value)];
+  }
+  if (key === 'info') {
+    return value.length === comparisonInfoKeys.length ? '全情報' : `${value.length}項目`;
+  }
+  if (key === 'theme') {
+    return comparisonThemeOptions.find((option) => option.id === value)?.label ?? value;
+  }
+  if (key === 'urgency') {
+    return comparisonUrgencyOptions.find((option) => option.id === value)?.label ?? value;
+  }
+  if (key === 'intensity') {
+    return comparisonIntensityOptions.find((option) => option.id === value)?.label ?? value;
+  }
+  return String(value);
 }
