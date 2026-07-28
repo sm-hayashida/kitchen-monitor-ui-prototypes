@@ -11,6 +11,7 @@ import { useComparisonStore } from '../../features/kitchen-monitor/comparisonSta
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
+import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
@@ -36,6 +37,15 @@ const currentPage = ref(1);
 const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
 const layoutScrollRef = ref(null);
+const horizontalScrollerRef = ref(null);
+const horizontalNavigation = ref({
+  canNext: false,
+  canPrevious: false,
+  firstVisibleColumn: 0,
+  lastVisibleColumn: 0,
+  scrollProgress: 1,
+  totalColumnCount: 0,
+});
 const comparison = useComparisonStore();
 const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
 const comparisonPageClass = computed(() => [
@@ -62,12 +72,10 @@ const layoutContentInset = computed(() => {
   }
   return props.layout === 'n-scroll' ? 8 : 0;
 });
-const layoutReservedHeight = computed(() => (props.layout === 'n-scroll' ? 44 : 0));
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: layoutContentInset,
   heightTargetRef: layoutHeightTargetRef,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
-  reservedHeight: layoutReservedHeight,
 });
 
 const {
@@ -159,6 +167,14 @@ function setPage(nextPage) {
   currentPage.value = Math.min(pageCount.value, Math.max(1, nextPage));
 }
 
+function updateHorizontalNavigation(state) {
+  horizontalNavigation.value = state;
+}
+
+function scrollOrderByColumn(direction) {
+  horizontalScrollerRef.value?.scrollByColumn(direction);
+}
+
 function saveDepartmentSettings(departmentIds) {
   saveDepartments(departmentIds);
   closeAggregate();
@@ -180,6 +196,28 @@ function saveDepartmentSettings(departmentIds) {
     @switch-view="$emit('switch-view', $event)"
   >
     <template #header-actions>
+      <HeaderLayoutNavigation
+        v-if="isScroll"
+        mode="horizontal"
+        :can-next="horizontalNavigation.canNext"
+        :can-previous="horizontalNavigation.canPrevious"
+        :first-visible-column="horizontalNavigation.firstVisibleColumn"
+        :last-visible-column="horizontalNavigation.lastVisibleColumn"
+        :scroll-progress="horizontalNavigation.scrollProgress"
+        :total-column-count="horizontalNavigation.totalColumnCount"
+        @previous-column="scrollOrderByColumn(-1)"
+        @next-column="scrollOrderByColumn(1)"
+      />
+      <HeaderLayoutNavigation
+        v-if="isPaged"
+        mode="paged"
+        :current-page="currentPage"
+        :page-count="pageCount"
+        @first-page="setPage(1)"
+        @previous-page="setPage(currentPage - 1)"
+        @next-page="setPage(currentPage + 1)"
+        @last-page="setPage(pageCount)"
+      />
       <button
         class="top-bar-icon-button top-bar-filter-button"
         type="button"
@@ -201,10 +239,12 @@ function saveDepartmentSettings(departmentIds) {
       <div ref="layoutBodyRef" class="order-layout-body" :class="layout">
         <HorizontalColumnScroller
           v-if="isLayoutReady && isScroll"
+          ref="horizontalScrollerRef"
           class="order-horizontal-scroller"
           aria-label="注文一覧を横スクロール"
           :column-count="columnCount"
           :columns="scrollOrderColumns"
+          @navigation-state-change="updateHorizontalNavigation"
         >
           <template #column="{ column }">
             <TransitionGroup
@@ -264,46 +304,6 @@ function saveDepartmentSettings(departmentIds) {
           設定された部門の未調理注文はありません
         </p>
       </div>
-
-      <footer v-if="isPaged" class="order-view-pagination">
-        <button
-          type="button"
-          aria-label="最初のページ"
-          title="最初のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(1)"
-        >
-          «
-        </button>
-        <button
-          type="button"
-          aria-label="前のページ"
-          title="前のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(currentPage - 1)"
-        >
-          ‹
-        </button>
-        <strong>{{ currentPage }} / {{ pageCount }}</strong>
-        <button
-          type="button"
-          aria-label="次のページ"
-          title="次のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(currentPage + 1)"
-        >
-          ›
-        </button>
-        <button
-          type="button"
-          aria-label="最後のページ"
-          title="最後のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(pageCount)"
-        >
-          »
-        </button>
-      </footer>
     </div>
 
     <ProductAggregateModal
