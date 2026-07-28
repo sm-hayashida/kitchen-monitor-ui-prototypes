@@ -297,7 +297,7 @@ test('overview recipe and quantity display options keep locked values', () => {
   assert.deepEqual(
     comparisonQuantityDisplayStyleOptions.map((option) => option.label),
     [
-      '現行の左主数量 + 右全注文集計',
+      '現行・左に残数のみ',
       'A 残数量のみ',
       'B 独立2チップ',
       'C 強弱つき2チップ',
@@ -311,6 +311,11 @@ test('overview recipe and quantity display options keep locked values', () => {
       'K 右側・主数量＋横断集計',
       'L 右側・×残数量',
     ],
+  );
+  assert.ok(
+    !comparisonQuantityDisplayStyleOptions
+      .map((option) => option.label)
+      .includes('現行の左主数量 + 右全注文集計'),
   );
 });
 
@@ -344,7 +349,7 @@ test('quantity display model uses item remain and source total for A to J', () =
   assert.equal(createQuantityDisplayModel({ ...base, style: 'l' }).primaryLabel, '×2');
 });
 
-test('quantity display current and K keep aggregate behavior scoped to aggregate button', () => {
+test('quantity display current shows residual only while K keeps aggregate button', () => {
   const current = createQuantityDisplayModel({
     style: 'current',
     quantityMode: 'progress',
@@ -366,7 +371,7 @@ test('quantity display current and K keep aggregate behavior scoped to aggregate
 
   assert.equal(current.primaryLabel, '2/4');
   assert.equal(current.aggregateLabel, '9');
-  assert.equal(current.showAggregateButton, true);
+  assert.equal(current.showAggregateButton, false);
   assert.equal(k.primaryLabel, '2/4');
   assert.equal(k.aggregateLabel, '9');
   assert.equal(k.showAggregateButton, true);
@@ -428,6 +433,14 @@ test('clickable quantity targets keep at least 44px primary touch dimension', ()
     styleCss,
     /\.order-item-source-quantity \{[^}]*min-width: 44px;[^}]*min-height: 44px;/s,
   );
+  assert.match(
+    styleCss,
+    /\.item-row-action \{[^}]*width: 44px;[^}]*height: 44px;/s,
+  );
+  assert.match(
+    styleCss,
+    /\.comparison-rows-compact \.order-view-item \{[^}]*min-height: 48px;[^}]*padding-top: 2px;[^}]*padding-bottom: 2px;/s,
+  );
   for (const style of ['d', 'f', 'j']) {
     assert.match(
       styleCss,
@@ -439,7 +452,7 @@ test('clickable quantity targets keep at least 44px primary touch dimension', ()
 test('order item grid tracks accommodate 44px quantity controls without compact layout overflow', () => {
   assert.match(
     styleCss,
-    /\.order-view-item \{[^}]*grid-template-columns: minmax\(72px, auto\) minmax\(0, 1fr\) minmax\(44px, auto\);/s,
+    /\.order-view-item \{[^}]*grid-template-columns: minmax\(44px, auto\) minmax\(0, 1fr\) minmax\(44px, auto\);/s,
   );
   assert.match(
     styleCss,
@@ -451,7 +464,7 @@ test('order item grid tracks accommodate 44px quantity controls without compact 
   );
   assert.match(
     styleCss,
-    /\.table-view-grid \.order-view-item,[\s\S]*?\.table-horizontal-scroller \.order-view-item \{[^}]*grid-template-columns: minmax\(72px, auto\) minmax\(0, 1fr\) 44px;/s,
+    /\.table-view-grid \.order-view-item,[\s\S]*?\.table-horizontal-scroller \.order-view-item \{[^}]*grid-template-columns: minmax\(44px, auto\) minmax\(0, 1fr\) 44px;/s,
   );
   for (const style of ['e', 'i', 'j']) {
     assert.match(
@@ -472,12 +485,22 @@ test('quantity display row keeps button and aggregate DOM contracts', () => {
   assert.match(orderItemRowVue, /'has-aggregate-quantity': quantityDisplay\.showAggregateButton,/);
   assert.match(
     orderItemRowVue,
-    /class="order-item-quantity current-quantity-control"[\s\S]*:disabled="interactionsDisabled"[\s\S]*今回完了する数を選択[\s\S]*@click\.stop="openSameProductModal"/,
+    /class="order-item-quantity current-quantity-control"[\s\S]*:aria-label="`\$\{displayName\}の同一商品処理を開く。残数\$\{remainingCount\}、元数量\$\{orderItem\.quantity\}`"[\s\S]*@click\.stop="openSameProductModal"[\s\S]*\{\{ currentQuantityLabel \}\}/,
   );
+  assert.doesNotMatch(orderItemRowVue, /currentQuantityLabels|全体 \$/);
   assert.match(
     orderItemRowVue,
     /class="order-item-description order-item-body-action"[\s\S]*:disabled="interactionsDisabled \|\| bodyAction === 'none'"[\s\S]*@click\.stop="activateBody"/,
   );
+  assert.match(
+    orderItemRowVue,
+    /class="item-row-action"[\s\S]*:aria-label="bodyAriaLabel"[\s\S]*@click\.stop="activateBody"/,
+  );
+  assert.match(
+    orderItemRowVue,
+    /v-if="itemCompletionStartedAt"[\s\S]*class="item-row-action item-completion-cancel"[\s\S]*完了を取り消す[\s\S]*cancel-item-completion/,
+  );
+  assert.match(orderItemRowVue, /v-if="quantityDisplay\.showRightGroup && !itemCompletionStartedAt"/);
   assert.match(
     orderItemRowVue,
     /class="order-item-source-quantity"[\s\S]*type="button"[\s\S]*@click\.stop="openSameProductModal"[\s\S]*\{\{ quantityDisplay\.sourceTotalLabel \}\}/,
@@ -486,6 +509,7 @@ test('quantity display row keeps button and aggregate DOM contracts', () => {
     orderItemRowVue,
     /class="aggregate-quantity-button"[\s\S]*:class="\{ stacked: aggregate\.orderCount > 1 \}"[\s\S]*type="button"[\s\S]*:disabled="interactionsDisabled"[\s\S]*同一商品処理を開く[\s\S]*@click\.stop="openSameProductModal"/,
   );
+  assert.doesNotMatch(orderItemRowVue, /item-body-affordance/);
   assert.doesNotMatch(orderItemRowVue, /toggle-item-action|quantity-picker|open-item-detail/);
 });
 
@@ -496,6 +520,8 @@ test('safe and all item body actions expose the intended user-visible decision',
   assert.equal(decideItemBodyAction({ itemTapMode: 'all', remainingCount: 0 }), 'none');
   assert.match(orderItemRowVue, /残\$\{remainingCount\.value\}を完了/);
   assert.match(orderItemRowVue, /数量を選択/);
+  assert.match(orderItemRowVue, /return '完了';/);
+  assert.match(orderItemRowVue, /return '選択';/);
 });
 
 test('inline item and order memo presentation keeps full visible content', () => {
@@ -639,6 +665,51 @@ test('height estimator respects width spacing and visible information', () => {
       visibleInfo: minimalInfo,
     }),
   );
+});
+
+test('height estimator includes wrapped order memo chrome for cards and table groups', () => {
+  const order = {
+    id: 'order-memo-height',
+    order_memo: '注文メモが長い場合でも注文単位のメモとして一度だけ表示され、その折り返し高さを推定に含める',
+    items: [
+      {
+        order_item_id: 'memo-item-1',
+        name: '唐揚げ定食',
+        quantity: 1,
+        toppings: [],
+        memo: '',
+      },
+    ],
+    table_info_id: 'table-1',
+    table_no: 'T1',
+    ordered_elapsed_minutes: 5,
+    guest_count: 2,
+  };
+  const withMemo = {
+    cardMinWidth: 260,
+    rowSpacing: 'compact',
+    visibleInfo: ['course', 'options', 'itemMemo', 'orderMemo', 'aggregate', 'bulkComplete'],
+  };
+  const withoutMemo = {
+    ...withMemo,
+    visibleInfo: ['course', 'options', 'itemMemo', 'aggregate', 'bulkComplete'],
+  };
+  const tableWithMemo = createTableCardSegments(createTableGroups([order]), {
+    maxCardHeight: 240,
+    estimateOptions: withMemo,
+  })[0];
+  const tableWithoutMemo = createTableCardSegments(createTableGroups([order]), {
+    maxCardHeight: 240,
+    estimateOptions: withoutMemo,
+  })[0];
+
+  assert.ok(estimateOrderCardHeight(order, withMemo) > estimateOrderCardHeight(order, withoutMemo));
+  assert.ok(
+    estimateTableCardHeight(tableWithMemo, withMemo) >
+      estimateTableCardHeight(tableWithoutMemo, withoutMemo),
+  );
+  assert.equal(tableWithMemo.order_groups[0].order_memo, order.order_memo);
+  assert.equal(tableWithMemo.items[0].memo, '');
 });
 
 test('long order and table data create bounded continuation segments', () => {

@@ -45,7 +45,7 @@ export function createQuantityDisplayModel({
     : String(totalQuantity);
   const showSourceTotal = sourceTotalStyles.has(normalizedStyle) ||
     (normalizedStyle === 'g' && remainingQuantity !== Number(totalQuantity));
-  const showAggregateButton = (isCurrent || normalizedStyle === 'k') && hasAggregateQuantity;
+  const showAggregateButton = normalizedStyle === 'k' && hasAggregateQuantity;
 
   return {
     aggregateLabel: aggregateTotalQuantity === null ? '' : String(aggregateTotalQuantity),
