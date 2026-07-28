@@ -15,6 +15,7 @@ export const comparisonDefaults = Object.freeze({
   rowSpacing: 'standard',
   quantityMode: 'current',
   quantityDisplayStyle: 'current',
+  itemTapMode: 'all',
   orderUndoMs: 3000,
   itemHideMs: 5000,
   targetMinutes: 15,
@@ -37,6 +38,7 @@ const allCurrentRecipeFields = Object.freeze({
   cardMinWidth: 290,
   rowSpacing: 'standard',
   quantityMode: 'current',
+  itemTapMode: 'all',
   orderUndoMs: 3000,
   itemHideMs: 5000,
   targetMinutes: 15,
@@ -63,6 +65,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 260,
       rowSpacing: 'compact',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -81,6 +84,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 360,
       rowSpacing: 'comfortable',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -99,6 +103,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 320,
       rowSpacing: 'standard',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -117,6 +122,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 360,
       rowSpacing: 'comfortable',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -129,12 +135,13 @@ export const comparisonRecipes = Object.freeze({
     group: 'operation',
     label: '誤操作防止',
     purpose: '取消可能時間を長くする',
-    effectSummary: '320px・注文5秒・商品8秒',
+    effectSummary: '安全タップ・注文5秒・商品8秒',
     settings: {
       scenario: 'normal',
       cardMinWidth: 320,
       rowSpacing: 'standard',
       quantityMode: 'current',
+      itemTapMode: 'safe',
       orderUndoMs: 5000,
       itemHideMs: 8000,
       targetMinutes: 15,
@@ -153,6 +160,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 290,
       rowSpacing: 'compact',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 0,
       itemHideMs: 0,
       targetMinutes: 15,
@@ -171,6 +179,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 290,
       rowSpacing: 'compact',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -189,6 +198,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 320,
       rowSpacing: 'standard',
       quantityMode: 'current',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -207,6 +217,7 @@ export const comparisonRecipes = Object.freeze({
       cardMinWidth: 320,
       rowSpacing: 'compact',
       quantityMode: 'progress',
+      itemTapMode: 'all',
       orderUndoMs: 3000,
       itemHideMs: 5000,
       targetMinutes: 15,
@@ -254,6 +265,11 @@ export const comparisonQuantityDisplayStyleOptions = Object.freeze([
   Object.freeze({ id: 'l', label: 'L 右側・×残数量' }),
 ]);
 
+export const comparisonItemTapModeOptions = Object.freeze([
+  Object.freeze({ id: 'all', label: '商品タップで残り全部を完了' }),
+  Object.freeze({ id: 'safe', label: '1個だけ即完了・複数は数量確認' }),
+]);
+
 export const comparisonLabels = Object.freeze({
   scenarios: Object.freeze({
     normal: '通常',
@@ -278,6 +294,11 @@ export const comparisonLabels = Object.freeze({
       comparisonQuantityDisplayStyleOptions.map((option) => [option.id, option.label]),
     ),
   ),
+  itemTapModes: Object.freeze(
+    Object.fromEntries(
+      comparisonItemTapModeOptions.map((option) => [option.id, option.label]),
+    ),
+  ),
   info: Object.freeze({
     course: 'コース',
     options: 'オプション',
@@ -300,6 +321,7 @@ export const comparisonOptions = Object.freeze({
   quantityDisplayStyles: Object.freeze(
     comparisonQuantityDisplayStyleOptions.map((option) => option.id),
   ),
+  itemTapModes: Object.freeze(comparisonItemTapModeOptions.map((option) => option.id)),
   orderUndoMs: Object.freeze([0, 2000, 3000, 5000]),
   itemHideMs: Object.freeze([0, 3000, 5000, 8000]),
   targetMinutes: Object.freeze([10, 15, 20, 30]),
@@ -315,6 +337,7 @@ export const comparisonQueryKeys = Object.freeze({
   rowSpacing: 'cmp_rows',
   quantityMode: 'cmp_qty',
   quantityDisplayStyle: 'cmp_qty_style',
+  itemTapMode: 'cmp_item_tap',
   orderUndoMs: 'cmp_order_undo',
   itemHideMs: 'cmp_item_hide',
   targetMinutes: 'cmp_target',
@@ -332,6 +355,7 @@ const recipeFieldKeys = Object.freeze([
   'cardMinWidth',
   'rowSpacing',
   'quantityMode',
+  'itemTapMode',
   'orderUndoMs',
   'itemHideMs',
   'targetMinutes',
@@ -345,6 +369,7 @@ const differenceFieldLabels = Object.freeze({
   rowSpacing: '行間',
   quantityMode: '数量',
   quantityDisplayStyle: '数量表示',
+  itemTapMode: '商品タップ',
   orderUndoMs: '注文取消',
   itemHideMs: '商品非表示',
   targetMinutes: '目標',
@@ -385,6 +410,11 @@ export function normalizeComparisonSettings(candidate = {}) {
       candidate.quantityDisplayStyle,
       comparisonOptions.quantityDisplayStyles,
       comparisonDefaults.quantityDisplayStyle,
+    ),
+    itemTapMode: enumValue(
+      candidate.itemTapMode,
+      comparisonOptions.itemTapModes,
+      comparisonDefaults.itemTapMode,
     ),
     orderUndoMs: numberValue(
       candidate.orderUndoMs,
@@ -479,6 +509,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   assignString(candidate, 'rowSpacing', params.get(comparisonQueryKeys.rowSpacing));
   assignString(candidate, 'quantityMode', params.get(comparisonQueryKeys.quantityMode));
   assignString(candidate, 'quantityDisplayStyle', params.get(comparisonQueryKeys.quantityDisplayStyle));
+  assignString(candidate, 'itemTapMode', params.get(comparisonQueryKeys.itemTapMode));
   assignNumber(candidate, 'orderUndoMs', params.get(comparisonQueryKeys.orderUndoMs));
   assignNumber(candidate, 'itemHideMs', params.get(comparisonQueryKeys.itemHideMs));
   assignNumber(candidate, 'targetMinutes', params.get(comparisonQueryKeys.targetMinutes));
@@ -528,6 +559,13 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
     comparisonQueryKeys.quantityDisplayStyle,
     normalized.quantityDisplayStyle,
     comparisonDefaults.quantityDisplayStyle,
+    options,
+  );
+  appendSetting(
+    params,
+    comparisonQueryKeys.itemTapMode,
+    normalized.itemTapMode,
+    comparisonDefaults.itemTapMode,
     options,
   );
   appendSetting(params, comparisonQueryKeys.orderUndoMs, normalized.orderUndoMs, comparisonDefaults.orderUndoMs, options);
@@ -661,6 +699,9 @@ function getComparisonValueLabel(key, value) {
   }
   if (key === 'quantityDisplayStyle') {
     return comparisonLabels.quantityDisplayStyles[value];
+  }
+  if (key === 'itemTapMode') {
+    return comparisonLabels.itemTapModes[value];
   }
   if (key === 'orderUndoMs' || key === 'itemHideMs') {
     return `${value / 1000}秒`;

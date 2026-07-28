@@ -21,6 +21,7 @@ export function createComparisonStore(initialHash = window.location.hash) {
     settings.rowSpacing,
     settings.quantityMode,
     settings.quantityDisplayStyle,
+    settings.itemTapMode,
     settings.orderUndoMs,
     settings.itemHideMs,
     settings.targetMinutes,

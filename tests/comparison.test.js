@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import {
   applyComparisonPreset,
   comparisonDefaults,
+  comparisonItemTapModeOptions,
   comparisonOptions,
   comparisonQuantityDisplayStyleOptions,
   comparisonRecipeGroups,
@@ -14,6 +15,14 @@ import {
   parseComparisonHash,
   serializeComparisonHash,
 } from '../src/features/kitchen-monitor/comparisonConfig.js';
+import { decideItemBodyAction } from '../src/features/kitchen-monitor/itemActionRules.js';
+import {
+  clampSelection,
+  createModalSelections,
+  createModalSelectionUpdates,
+  setModalSelection,
+  sumModalSelections,
+} from '../src/features/kitchen-monitor/modalSelection.js';
 import { createScenarioOrders } from '../src/features/kitchen-monitor/comparisonScenarios.js';
 import {
   createOrderCardSegments,
@@ -27,10 +36,35 @@ import {
   estimateTableCardHeight,
 } from '../src/features/kitchen-monitor/tableViewModel.js';
 import { createQuantityDisplayModel } from '../src/features/kitchen-monitor/quantityDisplay.js';
+import { getOrderItemInlineDetails } from '../src/features/kitchen-monitor/orderItemPresentation.js';
 
 const styleCss = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
 const orderItemRowVue = readFileSync(
   new URL('../src/components/kitchen-monitor/OrderItemRow.vue', import.meta.url),
+  'utf8',
+);
+const orderWorkspaceVue = readFileSync(
+  new URL('../src/components/kitchen-monitor/OrderViewWorkspace.vue', import.meta.url),
+  'utf8',
+);
+const orderViewCardVue = readFileSync(
+  new URL('../src/components/kitchen-monitor/OrderViewCard.vue', import.meta.url),
+  'utf8',
+);
+const tableWorkspaceVue = readFileSync(
+  new URL('../src/components/kitchen-monitor/TableViewWorkspace.vue', import.meta.url),
+  'utf8',
+);
+const tableViewCardVue = readFileSync(
+  new URL('../src/components/kitchen-monitor/TableViewCard.vue', import.meta.url),
+  'utf8',
+);
+const aggregateModalVue = readFileSync(
+  new URL('../src/components/kitchen-monitor/ProductAggregateModal.vue', import.meta.url),
+  'utf8',
+);
+const useOrderViewMockSource = readFileSync(
+  new URL('../src/features/kitchen-monitor/useOrderViewMock.js', import.meta.url),
   'utf8',
 );
 
@@ -55,6 +89,7 @@ test('share hash serializes a complete reproducible comparison state', () => {
     rowSpacing: 'comfortable',
     quantityMode: 'progress',
     quantityDisplayStyle: 'e',
+    itemTapMode: 'safe',
     orderUndoMs: 5000,
     itemHideMs: 8000,
     targetMinutes: 30,
@@ -78,6 +113,7 @@ test('share hash serializes a complete reproducible comparison state', () => {
   assert.match(hash, /cmp_urgency=colorSafe/);
   assert.match(hash, /cmp_intensity=strong/);
   assert.match(hash, /cmp_qty_style=e/);
+  assert.match(hash, /cmp_item_tap=safe/);
   assert.equal(parsed.route, 'table-n-page');
   assert.equal(parsed.openPanel, true);
   assert.deepEqual(parsed.settings, settings);
@@ -99,6 +135,31 @@ test('quantity display style k and l round trip through comparison hash', () => 
   }
 });
 
+test('item tap mode defaults, labels, and URL round trip use locked values', () => {
+  assert.equal(comparisonDefaults.itemTapMode, 'all');
+  assert.deepEqual(
+    comparisonItemTapModeOptions.map((option) => [option.id, option.label]),
+    [
+      ['all', '商品タップで残り全部を完了'],
+      ['safe', '1個だけ即完了・複数は数量確認'],
+    ],
+  );
+  assert.deepEqual(comparisonOptions.itemTapModes, ['all', 'safe']);
+
+  const safeHash = serializeComparisonHash('table-n-scroll', {
+    ...createDefaultComparisonSettings(),
+    itemTapMode: 'safe',
+  });
+  const parsed = parseComparisonHash(safeHash);
+
+  assert.match(safeHash, /cmp_item_tap=safe/);
+  assert.equal(parsed.settings.itemTapMode, 'safe');
+  assert.equal(
+    serializeComparisonHash('order-n-scroll', createDefaultComparisonSettings()),
+    '#order-n-scroll',
+  );
+});
+
 test('share hash includes default color axes when complete state is requested', () => {
   const hash = serializeComparisonHash('order-n-scroll', createDefaultComparisonSettings(), [], {
     includeDefaults: true,
@@ -109,6 +170,7 @@ test('share hash includes default color axes when complete state is requested', 
   assert.match(hash, /cmp_urgency=standard/);
   assert.match(hash, /cmp_intensity=standard/);
   assert.match(hash, /cmp_qty_style=current/);
+  assert.match(hash, /cmp_item_tap=all/);
   assert.match(hash, /compare=1/);
 });
 
@@ -120,6 +182,7 @@ test('recipes produce deterministic complete non-color settings and preserve col
     rowSpacing: 'comfortable',
     quantityMode: 'remaining',
     quantityDisplayStyle: 'j',
+    itemTapMode: 'all',
     orderUndoMs: 2000,
     itemHideMs: 3000,
     targetMinutes: 30,
@@ -144,6 +207,7 @@ test('recipes produce deterministic complete non-color settings and preserve col
     urgency: 'monochrome',
     intensity: 'soft',
     quantityDisplayStyle: 'j',
+    itemTapMode: 'safe',
   });
   assert.deepEqual(applyComparisonPreset(base, 'overview'), {
     ...comparisonRecipes.overview.settings,
@@ -152,6 +216,7 @@ test('recipes produce deterministic complete non-color settings and preserve col
     urgency: 'monochrome',
     intensity: 'soft',
     quantityDisplayStyle: 'j',
+    itemTapMode: 'all',
   });
   assert.deepEqual(applyComparisonPreset(base, 'current'), {
     ...comparisonRecipes.current.settings,
@@ -160,6 +225,7 @@ test('recipes produce deterministic complete non-color settings and preserve col
     urgency: 'monochrome',
     intensity: 'soft',
     quantityDisplayStyle: 'j',
+    itemTapMode: 'all',
   });
 });
 
@@ -202,6 +268,7 @@ test('overview recipe and quantity display options keep locked values', () => {
     cardMinWidth: 290,
     rowSpacing: 'standard',
     quantityMode: 'current',
+    itemTapMode: 'all',
     orderUndoMs: 3000,
     itemHideMs: 5000,
     targetMinutes: 15,
@@ -214,6 +281,7 @@ test('overview recipe and quantity display options keep locked values', () => {
     cardMinWidth: 260,
     rowSpacing: 'compact',
     quantityMode: 'current',
+    itemTapMode: 'all',
     orderUndoMs: 3000,
     itemHideMs: 5000,
     targetMinutes: 15,
@@ -327,11 +395,11 @@ test('quantity display right group keeps CSS placement contracts', () => {
   );
   assert.match(
     styleCss,
-    /\.quantity-group-j \.order-item-source-quantity \{[^}]*grid-row: 1;[^}]*height: 16px;/s,
+    /\.quantity-group-j \.order-item-source-quantity \{[^}]*grid-row: 1;[^}]*min-height: 44px;/s,
   );
   assert.match(
     styleCss,
-    /\.quantity-group-j \.order-item-quantity \{[^}]*grid-row: 2;[^}]*height: 24px;/s,
+    /\.quantity-group-j \.order-item-quantity \{[^}]*grid-row: 2;[^}]*min-width: 44px;[^}]*min-height: 44px;/s,
   );
   assert.match(
     styleCss,
@@ -347,22 +415,173 @@ test('quantity display right group keeps CSS placement contracts', () => {
   );
 });
 
+test('clickable quantity targets keep at least 44px primary touch dimension', () => {
+  assert.match(
+    styleCss,
+    /\.aggregate-quantity-button \{[^}]*width: 44px;[^}]*height: 44px;/s,
+  );
+  assert.match(
+    styleCss,
+    /\.order-item-quantity-group \.order-item-quantity,[\s\S]*?\.quantity-style-j \.order-item-quantity-group \.order-item-quantity \{[^}]*min-width: 44px;[^}]*min-height: 44px;/s,
+  );
+  assert.match(
+    styleCss,
+    /\.order-item-source-quantity \{[^}]*min-width: 44px;[^}]*min-height: 44px;/s,
+  );
+  for (const style of ['d', 'f', 'j']) {
+    assert.match(
+      styleCss,
+      new RegExp(`\\.quantity-style-${style} \\.aggregate-quantity-button \\{[\\s\\S]*width: 44px;[\\s\\S]*height: 44px;`),
+    );
+  }
+});
+
+test('order item grid tracks accommodate 44px quantity controls without compact layout overflow', () => {
+  assert.match(
+    styleCss,
+    /\.order-view-item \{[^}]*grid-template-columns: minmax\(72px, auto\) minmax\(0, 1fr\) minmax\(44px, auto\);/s,
+  );
+  assert.match(
+    styleCss,
+    /\.order-horizontal-scroller \.order-view-item \{[^}]*grid-template-columns: minmax\(44px, auto\) minmax\(0, 1fr\) minmax\(44px, auto\);/s,
+  );
+  assert.match(
+    styleCss,
+    /\.order-view-grid\.n-paged \.order-view-item,[\s\S]*?\.order-view-grid\.n-scroll \.order-view-item \{[^}]*grid-template-columns: minmax\(44px, auto\) minmax\(0, 1fr\) minmax\(44px, auto\);/s,
+  );
+  assert.match(
+    styleCss,
+    /\.table-view-grid \.order-view-item,[\s\S]*?\.table-horizontal-scroller \.order-view-item \{[^}]*grid-template-columns: minmax\(72px, auto\) minmax\(0, 1fr\) 44px;/s,
+  );
+  for (const style of ['e', 'i', 'j']) {
+    assert.match(
+      styleCss,
+      new RegExp(
+        `\\.quantity-style-${style}\\.has-aggregate-quantity \\{[^}]*grid-template-columns: minmax\\(44px, auto\\) minmax\\(0, 1fr\\) minmax\\(44px, auto\\);`,
+        's',
+      ),
+    );
+  }
+  assert.doesNotMatch(styleCss, /grid-template-columns:\s*24px minmax\(0, 1fr\) 27px;/);
+  assert.doesNotMatch(styleCss, /grid-template-columns:\s*(?:30px|minmax\(32px, auto\)|32px|34px) minmax\(0, 1fr\) (?:30px|42px|0);/);
+});
+
 test('quantity display row keeps button and aggregate DOM contracts', () => {
   assert.match(orderItemRowVue, /\[`quantity-style-\$\{quantityDisplayStyle\}`\]: true,/);
   assert.match(orderItemRowVue, /'quantity-side-right': quantityDisplay\.isRightAligned,/);
   assert.match(orderItemRowVue, /'has-aggregate-quantity': quantityDisplay\.showAggregateButton,/);
   assert.match(
     orderItemRowVue,
-    /class="order-item-quantity"[\s\S]*:disabled="interactionsDisabled"[\s\S]*:aria-label="`\$\{displayName\}の調理数を変更`"[\s\S]*@click\.stop="\$emit\('toggle-item-action', orderItem\.order_item_id\)"/,
+    /class="order-item-quantity current-quantity-control"[\s\S]*:disabled="interactionsDisabled"[\s\S]*今回完了する数を選択[\s\S]*@click\.stop="openSameProductModal"/,
   );
   assert.match(
     orderItemRowVue,
-    /class="order-item-source-quantity"[\s\S]*\{\{ quantityDisplay\.sourceTotalLabel \}\}/,
+    /class="order-item-description order-item-body-action"[\s\S]*:disabled="interactionsDisabled \|\| bodyAction === 'none'"[\s\S]*@click\.stop="activateBody"/,
   );
   assert.match(
     orderItemRowVue,
-    /class="aggregate-quantity-button"[\s\S]*:class="\{ stacked: aggregate\.orderCount > 1 \}"[\s\S]*type="button"[\s\S]*:disabled="interactionsDisabled"[\s\S]*:aria-label="`\$\{displayName\}の全注文を表示`"[\s\S]*@click\.stop="\$emit\('open-aggregate', aggregateKey\)"/,
+    /class="order-item-source-quantity"[\s\S]*type="button"[\s\S]*@click\.stop="openSameProductModal"[\s\S]*\{\{ quantityDisplay\.sourceTotalLabel \}\}/,
   );
+  assert.match(
+    orderItemRowVue,
+    /class="aggregate-quantity-button"[\s\S]*:class="\{ stacked: aggregate\.orderCount > 1 \}"[\s\S]*type="button"[\s\S]*:disabled="interactionsDisabled"[\s\S]*同一商品処理を開く[\s\S]*@click\.stop="openSameProductModal"/,
+  );
+  assert.doesNotMatch(orderItemRowVue, /toggle-item-action|quantity-picker|open-item-detail/);
+});
+
+test('safe and all item body actions expose the intended user-visible decision', () => {
+  assert.equal(decideItemBodyAction({ itemTapMode: 'all', remainingCount: 3 }), 'complete-remaining');
+  assert.equal(decideItemBodyAction({ itemTapMode: 'safe', remainingCount: 1 }), 'complete-remaining');
+  assert.equal(decideItemBodyAction({ itemTapMode: 'safe', remainingCount: 2 }), 'open-modal');
+  assert.equal(decideItemBodyAction({ itemTapMode: 'all', remainingCount: 0 }), 'none');
+  assert.match(orderItemRowVue, /残\$\{remainingCount\.value\}を完了/);
+  assert.match(orderItemRowVue, /数量を選択/);
+});
+
+test('inline item and order memo presentation keeps full visible content', () => {
+  const details = getOrderItemInlineDetails({
+    toppings: [
+      { id: 1, name: '大盛' },
+      { id: 2, name: '辛め' },
+      { id: 3, name: 'ねぎ抜き' },
+      { id: 4, name: 'ソース別' },
+    ],
+    memo: '長い商品メモを省略せず、そのまま厨房で確認できるように表示する',
+  });
+
+  assert.equal(details.visibleToppings.length, 4);
+  assert.equal(details.hiddenToppingCount, 0);
+  assert.equal(details.memo, '長い商品メモを省略せず、そのまま厨房で確認できるように表示する');
+  assert.equal(details.hasTruncatedMemo, false);
+  assert.doesNotMatch(orderItemRowVue, /他\{\{|全文|hasTruncatedMemo|hiddenToppingCount|…/);
+  assert.match(orderViewCardVue, /class="order-card-memo-preview order-card-memo-inline"/);
+  assert.match(tableViewCardVue, /class="table-order-memo-inline"/);
+});
+
+test('all quantity entry points share the same same-product modal action', () => {
+  assert.ok((orderItemRowVue.match(/@click\.stop="openSameProductModal"/g) ?? []).length >= 4);
+  assert.doesNotMatch(orderItemRowVue, /setProcessedQuantity|quantityOptions|toggleItemAction/);
+  assert.match(orderWorkspaceVue, /@apply-selections="applyAggregateSelections"/);
+  assert.match(tableWorkspaceVue, /@apply-selections="applyTableAggregateSelections"/);
+});
+
+test('modal per-order selections are bounded and produce explicit total updates', () => {
+  const matches = [
+    {
+      orderItem: {
+        order_item_id: '1001-1',
+        pending_quantity: 3,
+        processed_quantity: 2,
+      },
+    },
+    {
+      orderItem: {
+        order_item_id: '1002-1',
+        pending_quantity: 2,
+        processed_quantity: 0,
+      },
+    },
+  ];
+
+  assert.equal(clampSelection(9, 3), 3);
+  assert.equal(clampSelection(-1, 3), 0);
+  let selections = createModalSelections(matches, '1001-1');
+  assert.deepEqual(selections, { '1001-1': 1, '1002-1': 0 });
+  selections = setModalSelection(selections, '1002-1', 9, 2);
+
+  assert.equal(sumModalSelections(selections), 3);
+  assert.deepEqual(createModalSelectionUpdates(matches, selections), [
+    { orderItemId: '1001-1', processedQuantity: 3, selectedQuantity: 1 },
+    { orderItemId: '1002-1', processedQuantity: 2, selectedQuantity: 2 },
+  ]);
+  assert.match(aggregateModalVue, /今回完了する数/);
+  assert.match(aggregateModalVue, /残り全部/);
+  assert.match(aggregateModalVue, /totalSelectedQuantity === 0/);
+});
+
+test('row completion exposes cancel window in order and staged hide in table mode', () => {
+  assert.match(useOrderViewMockSource, /itemCompletionHideByItemId/);
+  assert.match(
+    useOrderViewMockSource,
+    /itemCompletionHideByItemId\.value\[orderItemId\][\s\S]*finishTableItem\(orderItemId\)/,
+  );
+  assert.match(
+    useOrderViewMockSource,
+    /clearItemCompletion\(orderItemId\);[\s\S]*調理済みにしました/,
+  );
+  assert.match(orderWorkspaceVue, /:item-completion-started-at="itemCompletionStartedAt"/);
+  assert.match(orderWorkspaceVue, /@cancel-item-completion="cancelTableItemCompletion"/);
+  assert.match(tableWorkspaceVue, /completeItemRemaining\(payload\.orderItemId, \{ hideWhenComplete: true \}\)/);
+});
+
+test('detail popover is no longer reachable from order or table workspaces', () => {
+  assert.equal(
+    existsSync(new URL('../src/components/kitchen-monitor/OrderItemDetailPopover.vue', import.meta.url)),
+    false,
+  );
+  assert.doesNotMatch(orderWorkspaceVue, /OrderItemDetailPopover|openItemDetail|selectedItemDetail/);
+  assert.doesNotMatch(tableWorkspaceVue, /OrderItemDetailPopover|openItemDetail|selectedItemDetail/);
+  assert.doesNotMatch(styleCss, /order-item-detail-popover|order-item-detail-trigger/);
 });
 
 test('height estimator respects width spacing and visible information', () => {
