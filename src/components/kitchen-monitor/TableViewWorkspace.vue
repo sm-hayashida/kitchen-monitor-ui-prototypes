@@ -19,6 +19,7 @@ import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOr
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
 import { useTableLayoutPreferences } from '../../features/kitchen-monitor/useTableLayoutPreferences';
+import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
@@ -46,6 +47,14 @@ const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
 const horizontalScrollerRef = ref(null);
 const activeTableCategoryId = ref('');
+const horizontalNavigation = ref({
+  canNext: false,
+  canPrevious: false,
+  firstVisibleColumn: 0,
+  lastVisibleColumn: 0,
+  scrollProgress: 1,
+  totalColumnCount: 0,
+});
 const comparison = useComparisonStore();
 const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
 const timingOptions = computed(() => ({
@@ -72,7 +81,6 @@ const isPaged = computed(() => props.layout === 'n-paged');
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
-  reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
 });
 
 const {
@@ -260,6 +268,14 @@ function setPage(nextPage) {
   currentPage.value = Math.min(pageCount.value, Math.max(1, nextPage));
 }
 
+function updateHorizontalNavigation(state) {
+  horizontalNavigation.value = state;
+}
+
+function scrollTableByColumn(direction) {
+  horizontalScrollerRef.value?.scrollByColumn(direction);
+}
+
 function toggleReorderMode() {
   if (!isReorderMode.value) {
     setManualOrder(orderedTableIds.value);
@@ -348,6 +364,28 @@ function syncActiveTableCategory(columnIndex) {
     @switch-view="$emit('switch-view', $event)"
   >
     <template #header-actions>
+      <HeaderLayoutNavigation
+        v-if="!isPaged"
+        mode="horizontal"
+        :can-next="horizontalNavigation.canNext"
+        :can-previous="horizontalNavigation.canPrevious"
+        :first-visible-column="horizontalNavigation.firstVisibleColumn"
+        :last-visible-column="horizontalNavigation.lastVisibleColumn"
+        :scroll-progress="horizontalNavigation.scrollProgress"
+        :total-column-count="horizontalNavigation.totalColumnCount"
+        @previous-column="scrollTableByColumn(-1)"
+        @next-column="scrollTableByColumn(1)"
+      />
+      <HeaderLayoutNavigation
+        v-if="isPaged"
+        mode="paged"
+        :current-page="currentPage"
+        :page-count="pageCount"
+        @first-page="setPage(1)"
+        @previous-page="setPage(currentPage - 1)"
+        @next-page="setPage(currentPage + 1)"
+        @last-page="setPage(pageCount)"
+      />
       <label v-if="isGroupedScroll" class="top-bar-group-control" title="テーブルカテゴリ">
         <LayoutGrid :size="17" :stroke-width="2.2" aria-hidden="true" />
         <span class="visually-hidden">テーブルカテゴリ</span>
@@ -404,6 +442,7 @@ function syncActiveTableCategory(columnIndex) {
           :column-count="columnCount"
           :column-meta="scrollTableColumnMeta"
           :columns="scrollTableColumns"
+          @navigation-state-change="updateHorizontalNavigation"
           @visible-column-change="syncActiveTableCategory"
         >
           <template #column-header="{ meta }">
@@ -493,46 +532,6 @@ function syncActiveTableCategory(columnIndex) {
           設定された部門の未調理テーブルはありません
         </p>
       </div>
-
-      <footer v-if="isPaged" class="order-view-pagination table-view-pagination">
-        <button
-          type="button"
-          aria-label="最初のページ"
-          title="最初のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(1)"
-        >
-          «
-        </button>
-        <button
-          type="button"
-          aria-label="前のページ"
-          title="前のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(currentPage - 1)"
-        >
-          ‹
-        </button>
-        <strong>{{ currentPage }} / {{ pageCount }}</strong>
-        <button
-          type="button"
-          aria-label="次のページ"
-          title="次のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(currentPage + 1)"
-        >
-          ›
-        </button>
-        <button
-          type="button"
-          aria-label="最後のページ"
-          title="最後のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(pageCount)"
-        >
-          »
-        </button>
-      </footer>
     </div>
 
     <ProductAggregateModal
