@@ -42,7 +42,13 @@ function isVisible(visibleInfo, key) {
 function estimateNameLineCount(displayName, cardMinWidth) {
   const textColumnWidth = Math.max(96, Number(cardMinWidth) - 112);
   const charactersPerLine = Math.max(9, Math.floor(textColumnWidth / 8));
-  return Math.min(2, Math.max(1, Math.ceil(displayName.length / charactersPerLine)));
+  return Math.max(1, Math.ceil(displayName.length / charactersPerLine));
+}
+
+function estimateTextLineCount(text, cardMinWidth, averageCharacterWidth = 7) {
+  const textColumnWidth = Math.max(96, Number(cardMinWidth) - 112);
+  const charactersPerLine = Math.max(9, Math.floor(textColumnWidth / averageCharacterWidth));
+  return Math.max(1, Math.ceil(String(text ?? '').length / charactersPerLine));
 }
 
 export function estimateOrderItemHeight(orderItem, {
@@ -61,7 +67,13 @@ export function estimateOrderItemHeight(orderItem, {
   );
   const hasMemoLine = Boolean(info.has('itemMemo') && inlineDetails.memo);
   const extraNameHeight = (estimateNameLineCount(displayName, cardMinWidth) - 1) * 18;
-  const detailLineCount = Number(hasOptionLine) + Number(hasMemoLine);
+  const optionText = [
+    info.has('course') ? orderItem.course_name : '',
+    ...(info.has('options') ? inlineDetails.visibleToppings.map((topping) => topping.name) : []),
+  ].filter(Boolean).join('・');
+  const detailLineCount =
+    (hasOptionLine ? estimateTextLineCount(optionText, cardMinWidth, 6) : 0) +
+    (hasMemoLine ? estimateTextLineCount(inlineDetails.memo, cardMinWidth, 6) : 0);
   const extraDetailHeight = Math.max(0, detailLineCount - 1) * detailLineHeight;
 
   return baseHeight + extraNameHeight + extraDetailHeight;

@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import {
   comparisonInfoKeys,
   comparisonIntensityOptions,
+  comparisonItemTapModeOptions,
   comparisonLabels,
   comparisonOptions,
   comparisonQuantityDisplayStyleOptions,
@@ -281,6 +282,14 @@ async function copyShareUrl() {
               :value="style.id"
             >
               {{ style.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>商品タップ</span>
+          <select :value="comparison.settings.itemTapMode" @change="updateText('itemTapMode', $event)">
+            <option v-for="mode in comparisonItemTapModeOptions" :key="mode.id" :value="mode.id">
+              {{ mode.label }}
             </option>
           </select>
         </label>

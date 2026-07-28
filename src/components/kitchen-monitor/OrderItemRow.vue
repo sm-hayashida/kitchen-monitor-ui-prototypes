@@ -5,6 +5,7 @@ import {
   getOrderItemDisplayName,
   getOrderItemInlineDetails,
 } from '../../features/kitchen-monitor/orderItemPresentation';
+import { decideItemBodyAction } from '../../features/kitchen-monitor/itemActionRules';
 import { createQuantityDisplayModel } from '../../features/kitchen-monitor/quantityDisplay';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import CountdownProgressLine from './CountdownProgressLine.vue';
@@ -58,20 +59,6 @@ const quantityDisplayStyle = computed(() => comparison.settings.quantityDisplayS
 const visibleToppings = computed(() =>
   showOptions.value ? inlineDetails.value.visibleToppings : [],
 );
-const hiddenToppingCount = computed(() =>
-  showOptions.value ? inlineDetails.value.hiddenToppingCount : 0,
-);
-const quantityLabel = computed(() => {
-  if (comparison.settings.quantityMode === 'remaining') {
-    return remainingCount.value;
-  }
-  if (comparison.settings.quantityMode === 'progress') {
-    return `${processedCount.value}/${props.orderItem.quantity}`;
-  }
-  return processedCount.value > 0
-    ? `${processedCount.value}/${props.orderItem.quantity}`
-    : props.orderItem.quantity;
-});
 const quantityDisplay = computed(() =>
   createQuantityDisplayModel({
     style: quantityDisplayStyle.value,
@@ -83,50 +70,53 @@ const quantityDisplay = computed(() =>
     showAggregate: showAggregate.value,
   }),
 );
-const quantityOptions = computed(() =>
-  props.orderItem.quantity <= 6
-    ? Array.from({ length: props.orderItem.quantity + 1 }, (_, index) => index)
-    : [],
+const currentQuantityLabels = computed(() => ({
+  progress: `残 ${remainingCount.value}/${props.orderItem.quantity}`,
+  aggregate: showAggregate.value && aggregate.value
+    ? `全体 ${aggregate.value.totalQuantity}`
+    : '全体 -',
+}));
+const bodyAction = computed(() =>
+  decideItemBodyAction({
+    itemTapMode: comparison.settings.itemTapMode,
+    remainingCount: remainingCount.value,
+  }),
 );
-function setProcessedQuantity(processedQuantity, keepOpen = false) {
-  const nextQuantity = Math.min(
-    props.orderItem.quantity,
-    Math.max(0, processedQuantity),
-  );
+const bodyActionLabel = computed(() => {
+  if (bodyAction.value === 'open-modal') {
+    return '数量を選択';
+  }
+  if (bodyAction.value === 'complete-remaining') {
+    return `残${remainingCount.value}を完了`;
+  }
+  return '完了済み';
+});
+const bodyAriaLabel = computed(() =>
+  bodyAction.value === 'open-modal'
+    ? `${displayName.value}の今回完了する数を選択`
+    : `${displayName.value}の${bodyActionLabel.value}`,
+);
 
-  return {
-    orderItemId: props.orderItem.order_item_id,
-    processedQuantity: nextQuantity,
-    keepOpen,
-  };
+function openSameProductModal() {
+  emit('open-aggregate', {
+    aggregateKey: aggregateKey.value,
+    originOrderItemId: props.orderItem.order_item_id,
+  });
 }
 
-function openItemDetail(event) {
-  const anchor = event.currentTarget.closest('.order-view-item')?.getBoundingClientRect();
-
-  if (!anchor) {
-    return;
-  }
-
-  emit('open-item-detail', {
+function activateBody() {
+  emit('activate-item', {
+    action: bodyAction.value,
+    aggregateKey: aggregateKey.value,
     orderItemId: props.orderItem.order_item_id,
-    anchorRect: {
-      top: anchor.top,
-      right: anchor.right,
-      bottom: anchor.bottom,
-      left: anchor.left,
-      width: anchor.width,
-      height: anchor.height,
-    },
+    remainingCount: remainingCount.value,
   });
 }
 
 const emit = defineEmits([
+  'activate-item',
   'cancel-item-completion',
   'open-aggregate',
-  'open-item-detail',
-  'set-item-processed-quantity',
-  'toggle-item-action',
 ]);
 </script>
 
@@ -144,21 +134,22 @@ const emit = defineEmits([
   >
     <button
       v-if="quantityDisplay.isCurrent"
-      class="order-item-quantity"
+      class="order-item-quantity current-quantity-control"
       :class="{ partial: processedCount > 0 }"
       type="button"
       :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の調理数を変更`"
-      @click.stop="$emit('toggle-item-action', orderItem.order_item_id)"
+      :aria-label="`${displayName}の今回完了する数を選択。${currentQuantityLabels.progress}、${currentQuantityLabels.aggregate}`"
+      @click.stop="openSameProductModal"
     >
-      <span>{{ quantityLabel }}</span>
+      <span>{{ currentQuantityLabels.progress }}</span>
+      <small>{{ currentQuantityLabels.aggregate }}</small>
     </button>
     <button
-      class="order-item-description order-item-detail-trigger"
+      class="order-item-description order-item-body-action"
       type="button"
-      :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の詳細を表示`"
-      @click.stop="openItemDetail"
+      :disabled="interactionsDisabled || bodyAction === 'none'"
+      :aria-label="bodyAriaLabel"
+      @click.stop="activateBody"
     >
       <b>{{ displayName }}</b>
       <span
@@ -169,12 +160,13 @@ const emit = defineEmits([
         <template v-if="visibleToppings.length">
           {{ visibleToppings.map((topping) => topping.name).join('・') }}
         </template>
-        <em v-if="hiddenToppingCount">他{{ hiddenToppingCount }}件</em>
       </span>
       <span v-if="showItemMemo && inlineDetails.memo" class="order-item-memo">
         {{ inlineDetails.memo }}
-        <em v-if="inlineDetails.hasTruncatedMemo">全文</em>
       </span>
+      <strong v-if="bodyAction !== 'none'" class="item-body-affordance">
+        {{ bodyActionLabel }}
+      </strong>
     </button>
     <div
       v-if="quantityDisplay.showRightGroup"
@@ -186,25 +178,29 @@ const emit = defineEmits([
         :class="{ partial: processedCount > 0 }"
         type="button"
         :disabled="interactionsDisabled"
-        :aria-label="`${displayName}の調理数を変更`"
-        @click.stop="$emit('toggle-item-action', orderItem.order_item_id)"
+        :aria-label="`${displayName}の今回完了する数を選択`"
+        @click.stop="openSameProductModal"
       >
         <span>{{ quantityDisplay.primaryLabel }}</span>
       </button>
-      <span
+      <button
         v-if="quantityDisplay.showSourceTotal"
         class="order-item-source-quantity"
+        type="button"
+        :disabled="interactionsDisabled"
+        :aria-label="`${displayName}の同一商品処理を開く`"
+        @click.stop="openSameProductModal"
       >
         <span>{{ quantityDisplay.sourceTotalLabel }}</span>
-      </span>
+      </button>
       <button
         v-if="quantityDisplay.showAggregateButton"
         class="aggregate-quantity-button"
         :class="{ stacked: aggregate.orderCount > 1 }"
         type="button"
         :disabled="interactionsDisabled"
-        :aria-label="`${displayName}の全注文を表示`"
-        @click.stop="$emit('open-aggregate', aggregateKey)"
+        :aria-label="`${displayName}の同一商品処理を開く`"
+        @click.stop="openSameProductModal"
       >
         <span>{{ quantityDisplay.aggregateLabel }}</span>
       </button>
@@ -215,8 +211,8 @@ const emit = defineEmits([
       :class="{ stacked: aggregate.orderCount > 1 }"
       type="button"
       :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の全注文を表示`"
-      @click.stop="$emit('open-aggregate', aggregateKey)"
+      :aria-label="`${displayName}の同一商品処理を開く`"
+      @click.stop="openSameProductModal"
     >
       <span>{{ quantityDisplay.aggregateLabel }}</span>
     </button>
@@ -226,57 +222,6 @@ const emit = defineEmits([
       aria-label="すべて調理済み"
     >✓</span>
     <span v-else class="order-item-aggregate-placeholder" aria-hidden="true"></span>
-
-    <div
-      v-if="!interactionsDisabled && activeItemActionId === orderItem.order_item_id"
-      class="item-quantity-menu quantity-picker"
-      @click.stop
-    >
-      <header>
-        <span>調理済み数</span>
-        <b>{{ processedCount }}/{{ orderItem.quantity }}</b>
-      </header>
-
-      <div v-if="quantityOptions.length" class="quantity-choice-grid">
-        <button
-          v-for="quantity in quantityOptions"
-          :key="quantity"
-          type="button"
-          :class="{ selected: processedCount === quantity }"
-          :aria-label="`${quantity}個を調理済みにする`"
-          @click="$emit('set-item-processed-quantity', setProcessedQuantity(quantity))"
-        >
-          {{ quantity }}
-        </button>
-      </div>
-
-      <div v-else class="quantity-stepper">
-        <button
-          type="button"
-          aria-label="調理済み数を1個減らす"
-          :disabled="processedCount === 0"
-          @click="$emit('set-item-processed-quantity', setProcessedQuantity(processedCount - 1, true))"
-        >
-          −
-        </button>
-        <strong>{{ processedCount }}/{{ orderItem.quantity }}</strong>
-        <button
-          type="button"
-          aria-label="調理済み数を1個増やす"
-          :disabled="processedCount === orderItem.quantity"
-          @click="$emit('set-item-processed-quantity', setProcessedQuantity(processedCount + 1, true))"
-        >
-          ＋
-        </button>
-        <button
-          class="quantity-complete-button"
-          type="button"
-          @click="$emit('set-item-processed-quantity', setProcessedQuantity(orderItem.quantity))"
-        >
-          全て
-        </button>
-      </div>
-    </div>
 
     <CountdownProgressLine
       v-if="itemCompletionStartedAt"

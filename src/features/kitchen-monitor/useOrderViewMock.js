@@ -8,6 +8,7 @@ import {
   getOrderItemAggregateKey,
   getOrderItemDisplayName,
 } from './orderItemPresentation';
+import { createItemCompletionQuantity } from './itemActionRules';
 
 const itemCompletionWindowMs = 5000;
 
@@ -19,13 +20,13 @@ export function useOrderViewMock({
   const orders = ref(structuredClone(toValue(initialOrders)));
   const selectedCategoryId = ref('all');
   const selectedAggregateKey = ref(null);
-  const selectedItemId = ref(null);
-  const selectedItemAnchor = ref(null);
+  const selectedAggregateOriginItemId = ref(null);
   const activeItemActionId = ref(null);
   const completionStartedAt = ref({});
   const completionDurationByOrderId = ref({});
   const itemCompletionStartedAt = ref({});
   const itemCompletionDurationByItemId = ref({});
+  const itemCompletionHideByItemId = ref({});
   const itemCompletionPreviousQuantityByItemId = ref({});
   const hiddenCompletedItemIds = ref(new Set());
   const processedUnitNumbersByItemId = ref({});
@@ -125,61 +126,27 @@ export function useOrderViewMock({
   const selectedAggregate = computed(
     () => aggregateByKey.value[selectedAggregateKey.value] ?? null,
   );
-  const selectedItemDetail = computed(() => {
-    if (!selectedItemId.value) {
-      return null;
-    }
-
-    for (const order of orders.value) {
-      const orderItem = order.items.find(
-        (candidate) => candidate.order_item_id === selectedItemId.value,
-      );
-
-      if (orderItem) {
-        const aggregateKey = getOrderItemAggregateKey(orderItem);
-        return {
-          aggregate: aggregateByKey.value[aggregateKey] ?? null,
-          order,
-          orderItem,
-          processedCount:
-            processedUnitNumbersByItemId.value[orderItem.order_item_id]?.length ?? 0,
-        };
-      }
-    }
-
-    return null;
-  });
 
   function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId;
   }
 
-  function openAggregate(aggregateKey) {
+  function openAggregate(payload) {
+    const aggregateKey = typeof payload === 'string' ? payload : payload?.aggregateKey;
+
+    if (!aggregateKey) {
+      return;
+    }
+
     closeItemAction();
-    closeItemDetail();
     selectedAggregateKey.value = aggregateKey;
+    selectedAggregateOriginItemId.value =
+      typeof payload === 'string' ? null : payload?.originOrderItemId ?? null;
   }
 
   function closeAggregate() {
     selectedAggregateKey.value = null;
-  }
-
-  function openItemDetail({ orderItemId, anchorRect }) {
-    closeItemAction();
-    closeAggregate();
-
-    if (selectedItemId.value === orderItemId) {
-      closeItemDetail();
-      return;
-    }
-
-    selectedItemId.value = orderItemId;
-    selectedItemAnchor.value = anchorRect;
-  }
-
-  function closeItemDetail() {
-    selectedItemId.value = null;
-    selectedItemAnchor.value = null;
+    selectedAggregateOriginItemId.value = null;
   }
 
   function toggleItemAction(orderItemId) {
@@ -197,6 +164,19 @@ export function useOrderViewMock({
       .find((item) => item.order_item_id === orderItemId);
   }
 
+  function openAggregateForItem(orderItemId) {
+    const orderItem = findOrderItem(orderItemId);
+
+    if (!orderItem) {
+      return;
+    }
+
+    openAggregate({
+      aggregateKey: getOrderItemAggregateKey(orderItem),
+      originOrderItemId: orderItemId,
+    });
+  }
+
   function clearItemCompletion(orderItemId) {
     window.clearTimeout(itemCompletionTimers.get(orderItemId));
     itemCompletionTimers.delete(orderItemId);
@@ -207,6 +187,9 @@ export function useOrderViewMock({
     const nextDurations = { ...itemCompletionDurationByItemId.value };
     delete nextDurations[orderItemId];
     itemCompletionDurationByItemId.value = nextDurations;
+    const nextHideByItemId = { ...itemCompletionHideByItemId.value };
+    delete nextHideByItemId[orderItemId];
+    itemCompletionHideByItemId.value = nextHideByItemId;
 
     const nextPreviousQuantities = {
       ...itemCompletionPreviousQuantityByItemId.value,
@@ -240,8 +223,9 @@ export function useOrderViewMock({
     }
 
     const previousQuantity = processedUnitNumbersByItemId.value[orderItemId]?.length ?? 0;
-    const reachesHiddenCompletion = hideWhenComplete && nextQuantity === orderItem.quantity;
-    if (!keepOpen || reachesHiddenCompletion) {
+    const reachesCompletion =
+      nextQuantity === orderItem.quantity && previousQuantity < orderItem.quantity;
+    if (!keepOpen || reachesCompletion) {
       closeItemAction();
     }
 
@@ -255,10 +239,12 @@ export function useOrderViewMock({
       [orderItemId]: Array.from({ length: nextQuantity }, (_, index) => index + 1),
     };
 
-    if (hideWhenComplete && nextQuantity === orderItem.quantity) {
+    if (reachesCompletion) {
       const durationMs = tableItemCompletionWindowMs.value;
       if (durationMs === 0) {
-        finishTableItem(orderItemId);
+        if (hideWhenComplete) {
+          finishTableItem(orderItemId);
+        }
         return;
       }
 
@@ -270,15 +256,23 @@ export function useOrderViewMock({
         ...itemCompletionDurationByItemId.value,
         [orderItemId]: durationMs,
       };
+      itemCompletionHideByItemId.value = {
+        ...itemCompletionHideByItemId.value,
+        [orderItemId]: Boolean(hideWhenComplete),
+      };
       itemCompletionPreviousQuantityByItemId.value = {
         ...itemCompletionPreviousQuantityByItemId.value,
         [orderItemId]: previousQuantity,
       };
       itemCompletionTimers.set(
         orderItemId,
-        window.setTimeout(() => finishTableItem(orderItemId), durationMs),
+        window.setTimeout(() => finishItemCompletion(orderItemId), durationMs),
       );
-      showToast(`${orderItem.name}は${formatSeconds(durationMs)}秒後にテーブル一覧から消えます`);
+      showToast(
+        hideWhenComplete
+          ? `${orderItem.name}は${formatSeconds(durationMs)}秒後にテーブル一覧から消えます`
+          : `${formatSeconds(durationMs)}秒以内なら${orderItem.name}の完了を取り消せます`,
+      );
     } else if (!keepOpen) {
       showToast(
         nextQuantity < previousQuantity
@@ -318,6 +312,9 @@ export function useOrderViewMock({
     const nextDurations = { ...itemCompletionDurationByItemId.value };
     delete nextDurations[orderItemId];
     itemCompletionDurationByItemId.value = nextDurations;
+    const nextHideByItemId = { ...itemCompletionHideByItemId.value };
+    delete nextHideByItemId[orderItemId];
+    itemCompletionHideByItemId.value = nextHideByItemId;
     const nextPreviousQuantities = {
       ...itemCompletionPreviousQuantityByItemId.value,
     };
@@ -327,11 +324,24 @@ export function useOrderViewMock({
     if (activeItemActionId.value === orderItemId) {
       closeItemAction();
     }
-    if (selectedItemId.value === orderItemId) {
-      closeItemDetail();
+    if (selectedAggregateOriginItemId.value === orderItemId) {
+      closeAggregate();
     }
     if (orderItem) {
       showToast(`${orderItem.name}をテーブル一覧から非表示にしました`);
+    }
+  }
+
+  function finishItemCompletion(orderItemId) {
+    if (itemCompletionHideByItemId.value[orderItemId]) {
+      finishTableItem(orderItemId);
+      return;
+    }
+
+    const orderItem = findOrderItem(orderItemId);
+    clearItemCompletion(orderItemId);
+    if (orderItem) {
+      showToast(`${orderItem.name}を調理済みにしました`);
     }
   }
 
@@ -391,9 +401,7 @@ export function useOrderViewMock({
           ([orderItemId]) => !finishedItemIds.has(orderItemId),
         ),
       );
-      if (finishedItemIds.has(selectedItemId.value)) {
-        closeItemDetail();
-      }
+      closeAggregate();
     }
     showToast('注文を調理済みにしました');
 
@@ -410,6 +418,37 @@ export function useOrderViewMock({
     }, 1800);
   }
 
+  function completeItemRemaining(orderItemId, { hideWhenComplete = false } = {}) {
+    const orderItem = findOrderItem(orderItemId);
+
+    if (!orderItem) {
+      return;
+    }
+
+    const processedCount =
+      processedUnitNumbersByItemId.value[orderItem.order_item_id]?.length ?? 0;
+
+    setItemProcessedQuantity({
+      orderItemId,
+      processedQuantity: createItemCompletionQuantity({
+        processedCount,
+        totalQuantity: orderItem.quantity,
+      }),
+      hideWhenComplete,
+    });
+  }
+
+  function applyAggregateSelections(updates, { hideWhenComplete = false } = {}) {
+    updates.forEach((update) => {
+      setItemProcessedQuantity({
+        orderItemId: update.orderItemId,
+        processedQuantity: update.processedQuantity,
+        hideWhenComplete,
+      });
+    });
+    closeAggregate();
+  }
+
   onBeforeUnmount(() => {
     window.clearInterval(clockTimer);
     window.clearTimeout(toastTimer);
@@ -423,25 +462,25 @@ export function useOrderViewMock({
     cancelTableItemCompletion,
     categories,
     closeAggregate,
-    closeItemDetail,
     closeItemAction,
+    completeItemRemaining,
     completionStartedAt,
     completionDurationByOrderId,
     completionWindowMs,
     hiddenCompletedItemIds,
     itemCompletionStartedAt,
     itemCompletionDurationByItemId,
+    itemCompletionHideByItemId,
     itemCompletionWindowMs: tableItemCompletionWindowMs,
     nowMs,
+    applyAggregateSelections,
     openAggregate,
-    openItemDetail,
+    openAggregateForItem,
     processedUnitNumbersByItemId,
     selectCategory,
     selectedAggregate,
-    selectedItemAnchor,
-    selectedItemDetail,
+    selectedAggregateOriginItemId,
     selectedCategoryId,
-    setItemProcessedQuantity,
     toast,
     toggleItemAction,
     toggleOrderCompletion,

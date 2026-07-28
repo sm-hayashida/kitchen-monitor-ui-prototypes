@@ -6,6 +6,7 @@ import {
   createOrderedMasonryPages,
 } from '../../features/kitchen-monitor/orderMasonryLayout';
 import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
+import { decideItemBodyAction } from '../../features/kitchen-monitor/itemActionRules';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   createTableCardSegments,
@@ -23,7 +24,6 @@ import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
-import OrderItemDetailPopover from './OrderItemDetailPopover.vue';
 import ProductAggregateModal from './ProductAggregateModal.vue';
 import TableViewCard from './TableViewCard.vue';
 
@@ -86,24 +86,22 @@ const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(l
 const {
   activeItemActionId,
   aggregateByKey,
+  applyAggregateSelections,
   cancelTableItemCompletion,
   closeAggregate,
-  closeItemDetail,
   closeItemAction,
+  completeItemRemaining,
   hiddenCompletedItemIds,
   itemCompletionDurationByItemId,
   itemCompletionStartedAt,
   itemCompletionWindowMs,
   nowMs,
   openAggregate,
-  openItemDetail,
+  openAggregateForItem,
   processedUnitNumbersByItemId,
-  setItemProcessedQuantity,
   selectedAggregate,
-  selectedItemAnchor,
-  selectedItemDetail,
+  selectedAggregateOriginItemId,
   toast,
-  toggleItemAction,
   visibleOrders,
 } = useOrderViewMock({
   initialOrders: scenarioOrders,
@@ -293,8 +291,21 @@ function moveTableInOrder(tableId, direction) {
   currentPage.value = 1;
 }
 
-function setTableItemProcessedQuantity(payload) {
-  setItemProcessedQuantity({ ...payload, hideWhenComplete: true });
+function activateTableItem(payload) {
+  const action = decideItemBodyAction({
+    itemTapMode: comparison.settings.itemTapMode,
+    remainingCount: payload.remainingCount,
+  });
+
+  if (action === 'complete-remaining') {
+    completeItemRemaining(payload.orderItemId, { hideWhenComplete: true });
+  } else if (action === 'open-modal') {
+    openAggregateForItem(payload.orderItemId);
+  }
+}
+
+function applyTableAggregateSelections(updates) {
+  applyAggregateSelections(updates, { hideWhenComplete: true });
 }
 
 function canMoveTable(tableId, direction) {
@@ -481,12 +492,10 @@ function syncActiveTableCategory(columnIndex) {
                 :item-completion-window-ms="itemCompletionWindowMs"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 :table="table"
+                @activate-item="activateTableItem"
                 @cancel-item-completion="cancelTableItemCompletion"
                 @move-table="moveTableInOrder(table.source_table_id, $event)"
                 @open-aggregate="openAggregate"
-                @open-item-detail="openItemDetail"
-                @set-item-processed-quantity="setTableItemProcessedQuantity"
-                @toggle-item-action="toggleItemAction"
                 @toggle-pinned="toggleTablePinned"
               />
             </TransitionGroup>
@@ -517,12 +526,10 @@ function syncActiveTableCategory(columnIndex) {
               :item-completion-window-ms="itemCompletionWindowMs"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               :table="table"
+              @activate-item="activateTableItem"
               @cancel-item-completion="cancelTableItemCompletion"
               @move-table="moveTableInOrder(table.source_table_id, $event)"
               @open-aggregate="openAggregate"
-              @open-item-detail="openItemDetail"
-              @set-item-processed-quantity="setTableItemProcessedQuantity"
-              @toggle-item-action="toggleItemAction"
               @toggle-pinned="toggleTablePinned"
             />
           </div>
@@ -537,16 +544,9 @@ function syncActiveTableCategory(columnIndex) {
     <ProductAggregateModal
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
+      :origin-order-item-id="selectedAggregateOriginItemId"
+      @apply-selections="applyTableAggregateSelections"
       @close="closeAggregate"
-    />
-
-    <OrderItemDetailPopover
-      v-if="selectedItemDetail && selectedItemAnchor"
-      :anchor-rect="selectedItemAnchor"
-      :detail="selectedItemDetail"
-      hide-when-complete
-      @close="closeItemDetail"
-      @set-item-processed-quantity="setTableItemProcessedQuantity"
     />
 
     <template #overlay>

@@ -56,12 +56,10 @@ const props = defineProps({
 });
 
 defineEmits([
+  'activate-item',
   'cancel-item-completion',
   'move-table',
   'open-aggregate',
-  'open-item-detail',
-  'set-item-processed-quantity',
-  'toggle-item-action',
   'toggle-pinned',
 ]);
 
@@ -190,7 +188,6 @@ function orderGroupTiming(orderGroup) {
         >
           <span>
             注文 {{ orderGroup.order_index }}
-            <i v-if="showOrderMemo && orderGroup.order_memo" class="table-order-memo-flag">メモ</i>
           </span>
           <b>注文から{{ orderGroup.elapsed_minutes }}分</b>
           <em v-if="orderGroupTiming(orderGroup).state !== 'normal'">
@@ -198,6 +195,13 @@ function orderGroupTiming(orderGroup) {
           </em>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
+        <p
+          v-if="showOrderMemo && orderGroup.order_memo"
+          class="table-order-memo-inline"
+        >
+          <strong>注文メモ</strong>
+          <span>{{ orderGroup.order_memo }}</span>
+        </p>
         <TransitionGroup tag="div" class="table-order-items" :name="itemTransitionName">
           <OrderItemRow
             v-for="orderItem in orderGroup.items"
@@ -209,11 +213,9 @@ function orderGroupTiming(orderGroup) {
             :item-completion-window-ms="itemCompletionDurationByItemId[orderItem.order_item_id] ?? itemCompletionWindowMs"
             :order-item="orderItem"
             :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
+            @activate-item="$emit('activate-item', $event)"
             @cancel-item-completion="$emit('cancel-item-completion', $event)"
             @open-aggregate="$emit('open-aggregate', $event)"
-            @open-item-detail="$emit('open-item-detail', $event)"
-            @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
-            @toggle-item-action="$emit('toggle-item-action', $event)"
           />
         </TransitionGroup>
       </section>
