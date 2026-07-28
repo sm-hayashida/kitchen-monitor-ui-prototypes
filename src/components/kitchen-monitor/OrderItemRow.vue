@@ -74,6 +74,13 @@ const quantityDisplay = computed(() =>
   }),
 );
 const currentQuantityLabel = computed(() => String(remainingCount.value));
+const quantityButtonAriaLabel = computed(() => {
+  if (quantityDisplay.value.showLeftAggregateTotal) {
+    return `${displayName.value}の同一商品処理を開く。残数${remainingCount.value}、同一商品の残数合計${quantityDisplay.value.aggregateLabel}`;
+  }
+
+  return `${displayName.value}の同一商品処理を開く。残数${remainingCount.value}、元数量${props.orderItem.quantity}`;
+});
 const bodyAction = computed(() =>
   decideItemBodyAction({
     itemTapMode: comparison.settings.itemTapMode,
@@ -141,15 +148,21 @@ const emit = defineEmits([
     }"
   >
     <button
-      v-if="quantityDisplay.isCurrent"
+      v-if="quantityDisplay.showLeftButton"
       class="order-item-quantity current-quantity-control"
-      :class="{ partial: hasPartialCompletion }"
+      :class="{ partial: hasPartialCompletion, compound: quantityDisplay.showLeftAggregateTotal }"
       type="button"
       :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の同一商品処理を開く。残数${remainingCount}、元数量${orderItem.quantity}`"
+      :aria-label="quantityButtonAriaLabel"
       @click.stop="openSameProductModal"
     >
-      <span>{{ currentQuantityLabel }}</span>
+      <span class="quantity-main-label">{{ currentQuantityLabel }}</span>
+      <span
+        v-if="quantityDisplay.showLeftAggregateTotal"
+        class="quantity-sub-label"
+      >
+        {{ quantityDisplay.leftAggregateTotalLabel }}
+      </span>
     </button>
     <button
       class="order-item-description order-item-body-action"
@@ -164,9 +177,13 @@ const emit = defineEmits([
         class="order-item-options"
       >
         <i v-if="showCourse && orderItem.course_name" class="order-item-course">{{ orderItem.course_name }}</i>
-        <template v-if="visibleToppings.length">
-          {{ visibleToppings.map((topping) => topping.name).join('・') }}
-        </template>
+        <span
+          v-for="topping in visibleToppings"
+          :key="topping.id ?? topping.name"
+          class="order-item-option-chip"
+        >
+          {{ topping.name }}
+        </span>
       </span>
       <span v-if="showItemMemo && inlineDetails.memo" class="order-item-memo">
         {{ inlineDetails.memo }}

@@ -2968,9 +2968,26 @@ button {
   text-align: center;
 }
 
+.current-quantity-control.compound {
+  align-content: center;
+  gap: 2px;
+}
+
 .current-quantity-control span {
   display: block;
   white-space: nowrap;
+}
+
+.current-quantity-control .quantity-main-label {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.current-quantity-control .quantity-sub-label {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .order-item-quantity.partial {
@@ -3101,14 +3118,39 @@ button {
 }
 
 .order-item-description .order-item-course {
-  display: inline;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
   border: 1px solid #fdba74;
   border-radius: 3px;
-  margin-right: 4px;
   background: var(--theme-accent-surface);
   color: var(--theme-accent-dark);
   font-style: normal;
   padding: 1px 4px;
+  overflow-wrap: anywhere;
+}
+
+.order-item-description .order-item-options {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.order-item-description .order-item-option-chip {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background: #f8fafc;
+  color: #475569;
+  padding: 1px 5px;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .item-row-action {
@@ -4548,7 +4590,9 @@ button.order-item-source-quantity {
 .comparison-quantity-style-preview .quantity-group-h .sample-main,
 .comparison-quantity-style-preview .quantity-group-i .sample-main,
 .comparison-quantity-style-preview .quantity-group-j .sample-main,
-.comparison-quantity-style-preview .quantity-group-l .sample-main {
+.comparison-quantity-style-preview .quantity-group-l .sample-main,
+.comparison-quantity-style-preview .quantity-group-m .sample-main,
+.comparison-quantity-style-preview .quantity-group-n .sample-main {
   border-color: var(--theme-accent);
   background: var(--theme-accent);
   color: #ffffff;
@@ -4636,6 +4680,23 @@ button.order-item-source-quantity {
 .comparison-quantity-style-preview .quantity-group-j .sample-total {
   grid-row: 1;
   height: 14px;
+  font-size: 9px;
+}
+
+.comparison-quantity-style-preview .quantity-group-m .quantity-style-sample,
+.comparison-quantity-style-preview .quantity-group-n .quantity-style-sample {
+  grid-template-columns: auto;
+  justify-items: center;
+  gap: 1px;
+}
+
+.comparison-quantity-style-preview .quantity-group-m .sample-total,
+.comparison-quantity-style-preview .quantity-group-n .sample-total {
+  min-width: 22px;
+  height: 14px;
+  border-color: transparent;
+  background: transparent;
+  color: #64748b;
   font-size: 9px;
 }
 
