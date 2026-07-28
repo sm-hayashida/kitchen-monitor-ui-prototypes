@@ -120,10 +120,10 @@ test('share hash serializes a complete reproducible comparison state', () => {
   assert.deepEqual(parsed.unknownQueryEntries, [['utm_source', 'review']]);
 });
 
-test('quantity display style k and l round trip through comparison hash', () => {
+test('quantity display style k through n round trip through comparison hash', () => {
   const baseSettings = createDefaultComparisonSettings();
 
-  for (const quantityDisplayStyle of ['k', 'l']) {
+  for (const quantityDisplayStyle of ['k', 'l', 'm', 'n']) {
     const hash = serializeComparisonHash('order-n-scroll', {
       ...baseSettings,
       quantityDisplayStyle,
@@ -292,7 +292,7 @@ test('overview recipe and quantity display options keep locked values', () => {
   assert.ok(comparisonOptions.cardMinWidths.includes(260));
   assert.deepEqual(
     comparisonQuantityDisplayStyleOptions.map((option) => option.id),
-    ['current', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'],
+    ['current', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n'],
   );
   assert.deepEqual(
     comparisonQuantityDisplayStyleOptions.map((option) => option.label),
@@ -310,6 +310,8 @@ test('overview recipe and quantity display options keep locked values', () => {
       'J 縦積み・合計上小',
       'K 右側・主数量＋横断集計',
       'L 右側・×残数量',
+      'M 左残数＋計',
+      'N 左残数／合計',
     ],
   );
   assert.ok(
@@ -347,6 +349,29 @@ test('quantity display model uses item remain and source total for A to J', () =
     false,
   );
   assert.equal(createQuantityDisplayModel({ ...base, style: 'l' }).primaryLabel, '×2');
+});
+
+test('quantity display model supports left remaining plus aggregate total proposals', () => {
+  const base = {
+    quantityMode: 'current',
+    processedCount: 1,
+    totalQuantity: 5,
+    aggregateTotalQuantity: 13,
+    hasAggregate: true,
+    showAggregate: true,
+  };
+  const totalLabel = createQuantityDisplayModel({ ...base, style: 'm' });
+  const fractionLabel = createQuantityDisplayModel({ ...base, style: 'n' });
+
+  assert.equal(totalLabel.showLeftButton, true);
+  assert.equal(totalLabel.showLeftAggregateTotal, true);
+  assert.equal(totalLabel.primaryLabel, '4');
+  assert.equal(totalLabel.leftAggregateTotalLabel, '計13');
+  assert.equal(totalLabel.showRightGroup, false);
+  assert.equal(totalLabel.showAggregateButton, false);
+  assert.equal(fractionLabel.showLeftAggregateTotal, true);
+  assert.equal(fractionLabel.primaryLabel, '4');
+  assert.equal(fractionLabel.leftAggregateTotalLabel, '/13');
 });
 
 test('quantity display current shows residual only while K keeps aggregate button', () => {
@@ -485,7 +510,13 @@ test('quantity display row keeps button and aggregate DOM contracts', () => {
   assert.match(orderItemRowVue, /'has-aggregate-quantity': quantityDisplay\.showAggregateButton,/);
   assert.match(
     orderItemRowVue,
-    /class="order-item-quantity current-quantity-control"[\s\S]*:aria-label="`\$\{displayName\}の同一商品処理を開く。残数\$\{remainingCount\}、元数量\$\{orderItem\.quantity\}`"[\s\S]*@click\.stop="openSameProductModal"[\s\S]*\{\{ currentQuantityLabel \}\}/,
+    /class="order-item-quantity current-quantity-control"[\s\S]*:aria-label="quantityButtonAriaLabel"[\s\S]*@click\.stop="openSameProductModal"[\s\S]*\{\{ currentQuantityLabel \}\}/,
+  );
+  assert.match(orderItemRowVue, /class="quantity-sub-label"[\s\S]*quantityDisplay\.leftAggregateTotalLabel/);
+  assert.match(orderItemRowVue, /同一商品の残数合計/);
+  assert.match(
+    readFileSync(new URL('../src/components/kitchen-monitor/ComparisonPanel.vue', import.meta.url), 'utf8'),
+    /showLeftAggregateTotal[\s\S]*leftAggregateTotalLabel/,
   );
   assert.doesNotMatch(orderItemRowVue, /currentQuantityLabels|全体 \$/);
   assert.match(
@@ -540,6 +571,11 @@ test('inline item and order memo presentation keeps full visible content', () =>
   assert.equal(details.memo, '長い商品メモを省略せず、そのまま厨房で確認できるように表示する');
   assert.equal(details.hasTruncatedMemo, false);
   assert.doesNotMatch(orderItemRowVue, /他\{\{|全文|hasTruncatedMemo|hiddenToppingCount|…/);
+  assert.match(orderItemRowVue, /v-for="topping in visibleToppings"/);
+  assert.match(orderItemRowVue, /class="order-item-option-chip"/);
+  assert.doesNotMatch(orderItemRowVue, /visibleToppings\.map\(\(topping\) => topping\.name\)\.join/);
+  assert.match(styleCss, /\.order-item-description \.order-item-options \{[^}]*display: flex;[^}]*flex-wrap: wrap;/s);
+  assert.match(styleCss, /\.order-item-description \.order-item-option-chip \{[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere;/s);
   assert.match(orderViewCardVue, /class="order-card-memo-preview order-card-memo-inline"/);
   assert.match(tableViewCardVue, /class="table-order-memo-inline"/);
 });
@@ -665,6 +701,31 @@ test('height estimator respects width spacing and visible information', () => {
       visibleInfo: minimalInfo,
     }),
   );
+});
+
+test('height estimator includes internal wrapping for a single long option chip', () => {
+  const baseOrderItem = {
+    name: '牛すじ煮込み',
+    kitchen_print_name: '',
+    toppings: [],
+    memo: '',
+  };
+  const estimateOptions = {
+    cardMinWidth: 260,
+    rowSpacing: 'standard',
+    visibleInfo: ['course', 'options', 'aggregate', 'bulkComplete'],
+  };
+
+  const shortChipHeight = estimateOrderItemHeight({
+    ...baseOrderItem,
+    course_name: 'ディナー',
+  }, estimateOptions);
+  const longChipHeight = estimateOrderItemHeight({
+    ...baseOrderItem,
+    course_name: '季節限定の長い長い長いコース名そのまま厨房確認用',
+  }, estimateOptions);
+
+  assert.ok(longChipHeight > shortChipHeight);
 });
 
 test('height estimator includes wrapped order memo chrome for cards and table groups', () => {

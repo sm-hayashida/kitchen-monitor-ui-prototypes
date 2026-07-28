@@ -14,6 +14,7 @@ export const rightAlignedQuantityDisplayStyles = Object.freeze([
 ]);
 
 const sourceTotalStyles = new Set(['b', 'c', 'd', 'e', 'f', 'h', 'i', 'j']);
+const leftAggregateTotalStyles = new Set(['m', 'n']);
 
 export function createQuantityDisplayModel({
   style = 'current',
@@ -46,6 +47,10 @@ export function createQuantityDisplayModel({
   const showSourceTotal = sourceTotalStyles.has(normalizedStyle) ||
     (normalizedStyle === 'g' && remainingQuantity !== Number(totalQuantity));
   const showAggregateButton = normalizedStyle === 'k' && hasAggregateQuantity;
+  const showLeftAggregateTotal = leftAggregateTotalStyles.has(normalizedStyle) && hasAggregateQuantity;
+  const leftAggregateTotalLabel = normalizedStyle === 'm'
+    ? `計${aggregateTotalQuantity}`
+    : `/${aggregateTotalQuantity}`;
 
   return {
     aggregateLabel: aggregateTotalQuantity === null ? '' : String(aggregateTotalQuantity),
@@ -54,8 +59,11 @@ export function createQuantityDisplayModel({
     isRightAligned,
     primaryLabel: String(primaryLabel),
     showAggregateButton,
+    showLeftAggregateTotal,
+    showLeftButton: isCurrent || leftAggregateTotalStyles.has(normalizedStyle),
     showRightGroup: isRightAligned,
     showSourceTotal,
+    leftAggregateTotalLabel: showLeftAggregateTotal ? leftAggregateTotalLabel : '',
     sourceTotalLabel,
   };
 }
@@ -80,6 +88,9 @@ function createCurrentQuantityLabel({
 function createPrimaryLabel({ style, currentLabel, remainingQuantity }) {
   if (style === 'current' || style === 'k') {
     return currentLabel;
+  }
+  if (style === 'm' || style === 'n') {
+    return remainingQuantity;
   }
   if (style === 'l') {
     return `×${remainingQuantity}`;

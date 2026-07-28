@@ -263,6 +263,8 @@ export const comparisonQuantityDisplayStyleOptions = Object.freeze([
   Object.freeze({ id: 'j', label: 'J 縦積み・合計上小' }),
   Object.freeze({ id: 'k', label: 'K 右側・主数量＋横断集計' }),
   Object.freeze({ id: 'l', label: 'L 右側・×残数量' }),
+  Object.freeze({ id: 'm', label: 'M 左残数＋計' }),
+  Object.freeze({ id: 'n', label: 'N 左残数／合計' }),
 ]);
 
 export const comparisonItemTapModeOptions = Object.freeze([

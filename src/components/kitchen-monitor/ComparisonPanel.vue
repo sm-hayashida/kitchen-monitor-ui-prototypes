@@ -309,12 +309,18 @@ async function copyShareUrl() {
             <span class="quantity-style-sample">
               <i class="sample-main">{{ style.display.primaryLabel }}</i>
               <i
-                v-if="style.display.showSourceTotal || style.display.showAggregateButton"
+                v-if="
+                  style.display.showSourceTotal ||
+                    style.display.showAggregateButton ||
+                    style.display.showLeftAggregateTotal
+                "
                 class="sample-total"
               >
                 {{ style.display.showSourceTotal
                   ? style.display.sourceTotalLabel
-                  : style.display.aggregateLabel }}
+                  : style.display.showLeftAggregateTotal
+                    ? style.display.leftAggregateTotalLabel
+                    : style.display.aggregateLabel }}
               </i>
             </span>
           </button>

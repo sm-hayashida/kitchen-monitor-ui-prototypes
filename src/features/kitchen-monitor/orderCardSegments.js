@@ -11,6 +11,8 @@ const ORDER_CARD_BORDER_HEIGHT = 2;
 const ORDER_CARD_MEASUREMENT_TOLERANCE = 8;
 const ORDER_MEMO_LABEL_WIDTH = 46;
 const ORDER_MEMO_PREVIEW_BASE_HEIGHT = 28;
+const OPTION_CHIP_HORIZONTAL_PADDING = 12;
+const OPTION_CHIP_GAP = 4;
 
 const ITEM_BUDGET_BY_LAYOUT = {
   z: 380,
@@ -52,6 +54,45 @@ function estimateTextLineCount(text, cardMinWidth, averageCharacterWidth = 7) {
   return Math.max(1, Math.ceil(String(text ?? '').length / charactersPerLine));
 }
 
+function estimateOptionChipLineCount({ courseName = '', toppings = [], cardMinWidth }) {
+  const textColumnWidth = Math.max(96, Number(cardMinWidth) - 112);
+  const chips = [
+    courseName ? String(courseName).length * 6 + OPTION_CHIP_HORIZONTAL_PADDING : 0,
+    ...toppings.map((topping) =>
+      String(topping.name ?? '').length * 6 + OPTION_CHIP_HORIZONTAL_PADDING,
+    ),
+  ].filter(Boolean).map((chipWidth) => ({
+    lineCount: Math.max(1, Math.ceil(chipWidth / textColumnWidth)),
+    width: Math.min(chipWidth, textColumnWidth),
+  }));
+
+  if (chips.length === 0) {
+    return 0;
+  }
+
+  let lineCount = 0;
+  let currentLineWidth = 0;
+  let currentLineHeight = 0;
+
+  chips.forEach((chip) => {
+    const nextWidth = currentLineWidth === 0
+      ? chip.width
+      : currentLineWidth + OPTION_CHIP_GAP + chip.width;
+
+    if (currentLineWidth > 0 && nextWidth > textColumnWidth) {
+      lineCount += currentLineHeight;
+      currentLineWidth = chip.width;
+      currentLineHeight = chip.lineCount;
+      return;
+    }
+
+    currentLineWidth = nextWidth;
+    currentLineHeight = Math.max(currentLineHeight, chip.lineCount);
+  });
+
+  return lineCount + currentLineHeight;
+}
+
 function estimateOrderMemoHeight(orderMemo, cardMinWidth) {
   if (!orderMemo) {
     return 0;
@@ -79,12 +120,14 @@ export function estimateOrderItemHeight(orderItem, {
   );
   const hasMemoLine = Boolean(info.has('itemMemo') && inlineDetails.memo);
   const extraNameHeight = (estimateNameLineCount(displayName, cardMinWidth) - 1) * 18;
-  const optionText = [
-    info.has('course') ? orderItem.course_name : '',
-    ...(info.has('options') ? inlineDetails.visibleToppings.map((topping) => topping.name) : []),
-  ].filter(Boolean).join('・');
   const detailLineCount =
-    (hasOptionLine ? estimateTextLineCount(optionText, cardMinWidth, 6) : 0) +
+    (hasOptionLine
+      ? estimateOptionChipLineCount({
+        courseName: info.has('course') ? orderItem.course_name : '',
+        toppings: info.has('options') ? inlineDetails.visibleToppings : [],
+        cardMinWidth,
+      })
+      : 0) +
     (hasMemoLine ? estimateTextLineCount(inlineDetails.memo, cardMinWidth, 6) : 0);
   const extraDetailHeight = Math.max(0, detailLineCount - 1) * detailLineHeight;
 
