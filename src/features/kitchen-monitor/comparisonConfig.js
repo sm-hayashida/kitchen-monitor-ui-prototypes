@@ -250,7 +250,7 @@ export const comparisonIntensityOptions = Object.freeze([
 ]);
 
 export const comparisonQuantityDisplayStyleOptions = Object.freeze([
-  Object.freeze({ id: 'current', label: '現行の左主数量 + 右全注文集計' }),
+  Object.freeze({ id: 'current', label: '現行・左に残数のみ' }),
   Object.freeze({ id: 'a', label: 'A 残数量のみ' }),
   Object.freeze({ id: 'b', label: 'B 独立2チップ' }),
   Object.freeze({ id: 'c', label: 'C 強弱つき2チップ' }),

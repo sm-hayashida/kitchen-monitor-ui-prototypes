@@ -3,13 +3,14 @@ import {
   getOrderItemInlineDetails,
 } from './orderItemPresentation.js';
 
-const ITEM_HEIGHT = 43;
+const ITEM_HEIGHT = 44;
 const ORDER_CARD_HEADER_HEIGHT = 60;
 const ORDER_CONTINUATION_HEADER_HEIGHT = 31;
 const ORDER_CARD_FOOTER_HEIGHT = 43;
 const ORDER_CARD_BORDER_HEIGHT = 2;
 const ORDER_CARD_MEASUREMENT_TOLERANCE = 8;
-const ORDER_MEMO_PREVIEW_HEIGHT = 34;
+const ORDER_MEMO_LABEL_WIDTH = 46;
+const ORDER_MEMO_PREVIEW_BASE_HEIGHT = 28;
 
 const ITEM_BUDGET_BY_LAYOUT = {
   z: 380,
@@ -19,8 +20,8 @@ const ITEM_BUDGET_BY_LAYOUT = {
 
 const ROW_SPACING_HEIGHT = Object.freeze({
   compact: 48,
-  standard: 62,
-  comfortable: 72,
+  standard: 54,
+  comfortable: 64,
 });
 
 const ROW_DETAIL_LINE_HEIGHT = Object.freeze({
@@ -49,6 +50,17 @@ function estimateTextLineCount(text, cardMinWidth, averageCharacterWidth = 7) {
   const textColumnWidth = Math.max(96, Number(cardMinWidth) - 112);
   const charactersPerLine = Math.max(9, Math.floor(textColumnWidth / averageCharacterWidth));
   return Math.max(1, Math.ceil(String(text ?? '').length / charactersPerLine));
+}
+
+function estimateOrderMemoHeight(orderMemo, cardMinWidth) {
+  if (!orderMemo) {
+    return 0;
+  }
+
+  const textColumnWidth = Math.max(96, Number(cardMinWidth) - ORDER_MEMO_LABEL_WIDTH - 32);
+  const charactersPerLine = Math.max(9, Math.floor(textColumnWidth / 6));
+  return ORDER_MEMO_PREVIEW_BASE_HEIGHT +
+    Math.max(0, Math.ceil(String(orderMemo).length / charactersPerLine) - 1) * 14;
 }
 
 export function estimateOrderItemHeight(orderItem, {
@@ -106,6 +118,7 @@ function takeItemsWithinHeight(items, itemBudget, estimateOptions) {
 }
 
 function estimateOrderCardChromeHeight(order, {
+  cardMinWidth = 290,
   isFirstSegment = true,
   isLastSegment = true,
   visibleInfo,
@@ -113,7 +126,7 @@ function estimateOrderCardChromeHeight(order, {
   return (
     (isFirstSegment ? ORDER_CARD_HEADER_HEIGHT : ORDER_CONTINUATION_HEADER_HEIGHT) +
     (isFirstSegment && isVisible(visibleInfo, 'orderMemo') && order.order_memo
-      ? ORDER_MEMO_PREVIEW_HEIGHT
+      ? estimateOrderMemoHeight(order.order_memo, cardMinWidth)
       : 0) +
     (isLastSegment && isVisible(visibleInfo, 'bulkComplete') ? ORDER_CARD_FOOTER_HEIGHT : 0) +
     ORDER_CARD_BORDER_HEIGHT +

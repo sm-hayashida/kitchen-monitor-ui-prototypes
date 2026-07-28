@@ -56,6 +56,9 @@ const showOptions = computed(() => comparison.enabledInfo.value.has('options'));
 const showItemMemo = computed(() => comparison.enabledInfo.value.has('itemMemo'));
 const showAggregate = computed(() => comparison.enabledInfo.value.has('aggregate'));
 const quantityDisplayStyle = computed(() => comparison.settings.quantityDisplayStyle ?? 'current');
+const hasPartialCompletion = computed(
+  () => processedCount.value > 0 && remainingCount.value > 0,
+);
 const visibleToppings = computed(() =>
   showOptions.value ? inlineDetails.value.visibleToppings : [],
 );
@@ -70,12 +73,7 @@ const quantityDisplay = computed(() =>
     showAggregate: showAggregate.value,
   }),
 );
-const currentQuantityLabels = computed(() => ({
-  progress: `残 ${remainingCount.value}/${props.orderItem.quantity}`,
-  aggregate: showAggregate.value && aggregate.value
-    ? `全体 ${aggregate.value.totalQuantity}`
-    : '全体 -',
-}));
+const currentQuantityLabel = computed(() => String(remainingCount.value));
 const bodyAction = computed(() =>
   decideItemBodyAction({
     itemTapMode: comparison.settings.itemTapMode,
@@ -90,6 +88,15 @@ const bodyActionLabel = computed(() => {
     return `残${remainingCount.value}を完了`;
   }
   return '完了済み';
+});
+const rowActionLabel = computed(() => {
+  if (bodyAction.value === 'open-modal') {
+    return '選択';
+  }
+  if (bodyAction.value === 'complete-remaining') {
+    return '完了';
+  }
+  return '済';
 });
 const bodyAriaLabel = computed(() =>
   bodyAction.value === 'open-modal'
@@ -130,19 +137,19 @@ const emit = defineEmits([
       [`quantity-style-${quantityDisplayStyle}`]: true,
       'quantity-side-right': quantityDisplay.isRightAligned,
       'has-aggregate-quantity': quantityDisplay.showAggregateButton,
+      'has-partial-completion': hasPartialCompletion,
     }"
   >
     <button
       v-if="quantityDisplay.isCurrent"
       class="order-item-quantity current-quantity-control"
-      :class="{ partial: processedCount > 0 }"
+      :class="{ partial: hasPartialCompletion }"
       type="button"
       :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の今回完了する数を選択。${currentQuantityLabels.progress}、${currentQuantityLabels.aggregate}`"
+      :aria-label="`${displayName}の同一商品処理を開く。残数${remainingCount}、元数量${orderItem.quantity}`"
       @click.stop="openSameProductModal"
     >
-      <span>{{ currentQuantityLabels.progress }}</span>
-      <small>{{ currentQuantityLabels.aggregate }}</small>
+      <span>{{ currentQuantityLabel }}</span>
     </button>
     <button
       class="order-item-description order-item-body-action"
@@ -164,12 +171,9 @@ const emit = defineEmits([
       <span v-if="showItemMemo && inlineDetails.memo" class="order-item-memo">
         {{ inlineDetails.memo }}
       </span>
-      <strong v-if="bodyAction !== 'none'" class="item-body-affordance">
-        {{ bodyActionLabel }}
-      </strong>
     </button>
     <div
-      v-if="quantityDisplay.showRightGroup"
+      v-if="quantityDisplay.showRightGroup && !itemCompletionStartedAt"
       class="order-item-quantity-group"
       :class="quantityDisplay.groupClass"
     >
@@ -206,7 +210,7 @@ const emit = defineEmits([
       </button>
     </div>
     <button
-      v-else-if="quantityDisplay.showAggregateButton"
+      v-else-if="quantityDisplay.showAggregateButton && !itemCompletionStartedAt"
       class="aggregate-quantity-button"
       :class="{ stacked: aggregate.orderCount > 1 }"
       type="button"
@@ -216,12 +220,35 @@ const emit = defineEmits([
     >
       <span>{{ quantityDisplay.aggregateLabel }}</span>
     </button>
+    <button
+      v-if="itemCompletionStartedAt"
+      class="item-row-action item-completion-cancel"
+      type="button"
+      :aria-label="`${displayName}の完了を取り消す`"
+      @click.stop="$emit('cancel-item-completion', orderItem.order_item_id)"
+    >
+      <span>取消</span>
+    </button>
+    <button
+      v-else-if="!quantityDisplay.showRightGroup && bodyAction !== 'none'"
+      class="item-row-action"
+      type="button"
+      :disabled="interactionsDisabled"
+      :aria-label="bodyAriaLabel"
+      @click.stop="activateBody"
+    >
+      <span>{{ rowActionLabel }}</span>
+    </button>
     <span
-      v-else-if="processedCount === orderItem.quantity"
+      v-else-if="!quantityDisplay.showRightGroup && processedCount === orderItem.quantity"
       class="order-item-processed-mark"
       aria-label="すべて調理済み"
     >✓</span>
-    <span v-else class="order-item-aggregate-placeholder" aria-hidden="true"></span>
+    <span
+      v-else-if="!quantityDisplay.showRightGroup"
+      class="order-item-aggregate-placeholder"
+      aria-hidden="true"
+    ></span>
 
     <CountdownProgressLine
       v-if="itemCompletionStartedAt"
@@ -229,14 +256,5 @@ const emit = defineEmits([
       :duration-ms="itemCompletionWindowMs"
       :started-at="itemCompletionStartedAt"
     />
-    <button
-      v-if="itemCompletionStartedAt"
-      class="item-completion-cancel"
-      type="button"
-      :aria-label="`${displayName}の完了を取り消す`"
-      @click.stop="$emit('cancel-item-completion', orderItem.order_item_id)"
-    >
-      <span>↺ 取消</span>
-    </button>
   </div>
 </template>
