@@ -1,6 +1,6 @@
 <script setup>
 import { Check, Clipboard, RotateCcw, SlidersHorizontal, X } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import {
   comparisonInfoKeys,
   comparisonIntensityOptions,
@@ -29,6 +29,7 @@ const props = defineProps({
 const emit = defineEmits(['switch-view']);
 const comparison = useComparisonStore();
 const copied = ref(false);
+const closeButtonRef = ref(null);
 let copiedTimer;
 
 const isOpen = computed(() => comparison.isPanelOpen.value);
@@ -65,6 +66,18 @@ const quantityPreviewSamples = computed(() =>
     }),
   })),
 );
+const activeViewLabel = computed(() =>
+  viewModeGroups
+    .flatMap((group) => group.views)
+    .find((view) => view.id === props.activeView)?.label ?? props.activeView,
+);
+
+watch(isOpen, async (open) => {
+  if (open) {
+    await nextTick();
+    closeButtonRef.value?.focus();
+  }
+});
 
 function updateNumber(key, event) {
   comparison.setField(key, Number(event.target.value));
@@ -111,6 +124,7 @@ async function copyShareUrl() {
 
 <template>
   <button
+    v-if="!isOpen"
     class="comparison-floating-entry"
     type="button"
     aria-label="比較パネルを開く"
@@ -118,27 +132,31 @@ async function copyShareUrl() {
     @click="openPanel"
   >
     <SlidersHorizontal :size="19" :stroke-width="2.3" aria-hidden="true" />
-    <span>比較</span>
+    <span>比較ラボ</span>
   </button>
 
   <aside
     v-if="isOpen"
     class="comparison-panel"
-    aria-label="比較設定"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="comparison-panel-title"
+    @keydown.esc="closePanel"
   >
     <header class="comparison-panel-head">
       <div>
-        <span>レビュー用</span>
-        <h2>比較</h2>
+        <span>UI REVIEW LAB</span>
+        <h2 id="comparison-panel-title">比較ラボ</h2>
+        <p>{{ activeViewLabel }}を表示中</p>
       </div>
-      <button type="button" aria-label="比較パネルを閉じる" @click="closePanel">
+      <button ref="closeButtonRef" type="button" aria-label="比較パネルを閉じる" @click="closePanel">
         <X :size="22" :stroke-width="2.3" aria-hidden="true" />
       </button>
     </header>
 
     <div class="comparison-status-summary" aria-live="polite">
       <div>
-        <span>レシピ</span>
+        <span>選択レシピ</span>
         <strong>{{ differenceSummary.activeRecipeLabel }}</strong>
       </div>
       <div>
@@ -149,11 +167,15 @@ async function copyShareUrl() {
         <span v-for="chip in differenceSummary.chips" :key="chip">{{ chip }}</span>
         <span v-if="differenceSummary.extraCount > 0">ほか{{ differenceSummary.extraCount }}件</span>
       </div>
+      <small>既定：N 左残数／合計・全情報・行タップで全完了</small>
     </div>
 
     <div class="comparison-panel-scroll">
       <section class="comparison-control-section">
-        <h3>画面</h3>
+        <header class="comparison-section-heading">
+          <div><span>01</span><h3>画面</h3></div>
+          <p>表示単位とレイアウトを切り替えます</p>
+        </header>
         <div class="comparison-route-groups">
           <div v-for="group in viewModeGroups" :key="group.id">
             <strong>{{ group.label }}</strong>
@@ -173,7 +195,10 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>レシピ</h3>
+        <header class="comparison-section-heading">
+          <div><span>02</span><h3>レシピ</h3></div>
+          <p>検証目的に合わせて設定一式を適用します</p>
+        </header>
         <div class="comparison-recipe-groups">
           <section v-for="group in groupedRecipes" :key="group.id">
             <h4>{{ group.label }}</h4>
@@ -195,7 +220,10 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>色</h3>
+        <header class="comparison-section-heading">
+          <div><span>03</span><h3>配色</h3></div>
+          <p>アクセントと警告の見分けやすさを比較します</p>
+        </header>
         <label>
           <span>テーマ</span>
           <select :value="comparison.settings.theme" @change="updateText('theme', $event)">
@@ -232,7 +260,10 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>シナリオ</h3>
+        <header class="comparison-section-heading">
+          <div><span>04</span><h3>データ量</h3></div>
+          <p>ピーク・長文・遅延などの固定データに切り替えます</p>
+        </header>
         <select :value="comparison.settings.scenario" @change="updateText('scenario', $event)">
           <option v-for="scenario in comparisonOptions.scenarios" :key="scenario" :value="scenario">
             {{ comparisonLabels.scenarios[scenario] }}
@@ -241,7 +272,22 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>密度</h3>
+        <header class="comparison-section-heading">
+          <div><span>05</span><h3>密度</h3></div>
+          <p>列数・カード幅・行間を独立して試せます</p>
+        </header>
+        <div class="comparison-segmented-control" role="group" aria-label="カード列数">
+          <button
+            v-for="column in comparisonOptions.columnCounts"
+            :key="column"
+            type="button"
+            :class="{ active: comparison.settings.columnCount === column }"
+            :aria-pressed="comparison.settings.columnCount === column"
+            @click="comparison.setField('columnCount', column)"
+          >
+            {{ column === 'auto' ? '自動' : `${column}列` }}
+          </button>
+        </div>
         <label>
           <span>カード幅</span>
           <select :value="comparison.settings.cardMinWidth" @change="updateNumber('cardMinWidth', $event)">
@@ -261,7 +307,10 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>表示情報</h3>
+        <header class="comparison-section-heading">
+          <div><span>06</span><h3>表示情報</h3></div>
+          <p>数量表現とカード内に出す情報を比較します</p>
+        </header>
         <label>
           <span>数量</span>
           <select :value="comparison.settings.quantityMode" @change="updateText('quantityMode', $event)">
@@ -282,14 +331,6 @@ async function copyShareUrl() {
               :value="style.id"
             >
               {{ style.label }}
-            </option>
-          </select>
-        </label>
-        <label>
-          <span>商品タップ</span>
-          <select :value="comparison.settings.itemTapMode" @change="updateText('itemTapMode', $event)">
-            <option v-for="mode in comparisonItemTapModeOptions" :key="mode.id" :value="mode.id">
-              {{ mode.label }}
             </option>
           </select>
         </label>
@@ -338,7 +379,18 @@ async function copyShareUrl() {
       </section>
 
       <section class="comparison-control-section">
-        <h3>時間</h3>
+        <header class="comparison-section-heading">
+          <div><span>07</span><h3>操作と時間</h3></div>
+          <p>完了方法・取消猶予・警告時刻・動きを試します</p>
+        </header>
+        <label>
+          <span>商品タップ</span>
+          <select :value="comparison.settings.itemTapMode" @change="updateText('itemTapMode', $event)">
+            <option v-for="mode in comparisonItemTapModeOptions" :key="mode.id" :value="mode.id">
+              {{ mode.label }}
+            </option>
+          </select>
+        </label>
         <label>
           <span>注文取消</span>
           <select :value="comparison.settings.orderUndoMs" @change="updateNumber('orderUndoMs', $event)">

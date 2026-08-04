@@ -9,19 +9,21 @@ const COMPLETE_FOOTER_HEIGHT = 34;
 const CARD_BORDER_HEIGHT = 2;
 const CARD_MEASUREMENT_TOLERANCE = 6;
 
-export function estimateOrderCardHeight(order) {
+export function estimateOrderCardHeight(order, estimateOptions = {}) {
   const isContinuation = (order.segment_index ?? 1) > 1;
   const isLastSegment = order.is_last_segment ?? true;
   const itemHeight = order.items.reduce(
-    (height, orderItem) => height + estimateOrderItemHeight(orderItem),
+    (height, orderItem) => height + estimateOrderItemHeight(orderItem, estimateOptions),
     0,
   );
 
   return (
     itemHeight +
     (isContinuation ? 0 : COMPACT_HEADER_HEIGHT) +
-    (isContinuation ? 0 : estimateOrderMemoHeight(order.order_memo)) +
-    (isLastSegment ? COMPLETE_FOOTER_HEIGHT : 0) +
+    (isContinuation ? 0 : estimateOrderMemoHeight(order.order_memo, estimateOptions)) +
+    (isLastSegment && new Set(estimateOptions.visibleInfo ?? ['bulkComplete']).has('bulkComplete')
+      ? COMPLETE_FOOTER_HEIGHT
+      : 0) +
     CARD_BORDER_HEIGHT +
     CARD_MEASUREMENT_TOLERANCE
   );

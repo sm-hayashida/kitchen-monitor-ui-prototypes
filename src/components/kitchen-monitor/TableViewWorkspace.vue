@@ -5,6 +5,8 @@ import {
   createCompactFlowColumns,
   createOrderedMasonryPages,
 } from '../../features/kitchen-monitor/orderMasonryLayout';
+import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   createTableCardSegments,
   createTableGroups,
@@ -18,6 +20,7 @@ import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOr
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
 import { useTableLayoutPreferences } from '../../features/kitchen-monitor/useTableLayoutPreferences';
+import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
@@ -43,13 +46,38 @@ const isReorderMode = ref(false);
 const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
 const horizontalScrollerRef = ref(null);
+const horizontalNavigation = ref({
+  canNext: false,
+  canPrevious: false,
+  firstVisibleColumn: 0,
+  lastVisibleColumn: 0,
+  scrollProgress: 1,
+  totalColumnCount: 0,
+});
 const activeTableCategoryId = ref('');
 const isPaged = computed(() => props.layout === 'n-paged');
+const comparison = useComparisonStore();
+const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
+const comparisonPageClass = computed(() => [
+  'table-view-layout',
+  `comparison-rows-${comparison.settings.rowSpacing}`,
+  comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
+].join(' '));
+const cardTransitionName = computed(() => comparison.settings.motion ? 'masonry-card' : '');
+const cardEstimateOptions = computed(() => ({
+  cardMinWidth: comparison.settings.cardMinWidth,
+  rowSpacing: comparison.settings.rowSpacing,
+  visibleInfo: comparison.settings.info,
+}));
+const timingOptions = computed(() => ({
+  targetMinutes: comparison.settings.targetMinutes,
+  warningWindowMinutes: comparison.settings.warningMinutes,
+}));
 const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   preferredColumnCount: columnCountPreference,
-  reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
 });
 
 const {
@@ -70,7 +98,11 @@ const {
   toast,
   toggleItemAction,
   visibleOrders,
-} = useOrderViewMock();
+} = useOrderViewMock({
+  initialOrders: scenarioOrders,
+  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
+  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
+});
 
 const {
   departments,
@@ -128,12 +160,13 @@ const sortedTableGroups = computed(() =>
 const tableSegments = computed(() =>
   createTableCardSegments(globallySortedTableGroups.value, {
     maxCardHeight: columnHeight.value,
+    estimateOptions: cardEstimateOptions.value,
   }),
 );
 const pagedTableColumns = computed(() =>
   createOrderedMasonryPages(tableSegments.value, {
     columnCount: columnCount.value,
-    estimateCardHeight: estimateTableCardHeight,
+    estimateCardHeight: (table) => estimateTableCardHeight(table, cardEstimateOptions.value),
     maxColumnHeight: columnHeight.value,
   }),
 );
@@ -164,17 +197,18 @@ const groupedScrollLayout = computed(() => {
   sortedTableCategoryGroups.value.forEach((group, groupIndex) => {
     const segments = createTableCardSegments(group.tables, {
       maxCardHeight: groupedColumnHeight,
+      estimateOptions: cardEstimateOptions.value,
     });
     const groupColumns = createCompactFlowColumns(segments, {
-      estimateCardHeight: estimateTableCardHeight,
+      estimateCardHeight: (table) => estimateTableCardHeight(table, cardEstimateOptions.value),
       maxColumnHeight: groupedColumnHeight,
     });
     const startColumnIndex = columns.length;
     const overdueTableCount = group.tables.filter(
-      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes).isOverdue,
+      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes, timingOptions.value).isOverdue,
     ).length;
     const warningTableCount = group.tables.filter(
-      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes).isWarning,
+      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes, timingOptions.value).isWarning,
     ).length;
 
     groups.push({
@@ -225,6 +259,14 @@ watch(
 
 function setPage(nextPage) {
   currentPage.value = Math.min(pageCount.value, Math.max(1, nextPage));
+}
+
+function updateHorizontalNavigation(state) {
+  horizontalNavigation.value = state;
+}
+
+function scrollTableByColumn(direction) {
+  horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
 function toggleReorderMode() {
@@ -315,13 +357,25 @@ function syncActiveTableCategory(columnIndex) {
     :categories="[]"
     external-settings
     :now-ms="nowMs"
-    page-class="table-view-layout"
+    :page-class="comparisonPageClass"
     :show-navigation="false"
     :toast="toast"
     @open-settings="isSettingsOpen = true"
     @switch-view="$emit('switch-view', $event)"
   >
     <template #header-actions>
+      <HeaderLayoutNavigation
+        v-if="!isPaged"
+        mode="horizontal"
+        :can-next="horizontalNavigation.canNext"
+        :can-previous="horizontalNavigation.canPrevious"
+        :first-visible-column="horizontalNavigation.firstVisibleColumn"
+        :last-visible-column="horizontalNavigation.lastVisibleColumn"
+        :scroll-progress="horizontalNavigation.scrollProgress"
+        :total-column-count="horizontalNavigation.totalColumnCount"
+        @previous-column="scrollTableByColumn(-1)"
+        @next-column="scrollTableByColumn(1)"
+      />
       <label v-if="isGroupedScroll" class="top-bar-group-control" title="テーブルカテゴリ">
         <LayoutGrid :size="17" :stroke-width="2.2" aria-hidden="true" />
         <span class="visually-hidden">テーブルカテゴリ</span>
@@ -378,6 +432,7 @@ function syncActiveTableCategory(columnIndex) {
           :column-count="columnCount"
           :column-meta="scrollTableColumnMeta"
           :columns="scrollTableColumns"
+          @navigation-state-change="updateHorizontalNavigation"
           @visible-column-change="syncActiveTableCategory"
         >
           <template #column-header="{ meta }">
@@ -400,7 +455,7 @@ function syncActiveTableCategory(columnIndex) {
             <TransitionGroup
               tag="div"
               class="horizontal-column-stack"
-              name="masonry-card"
+              :name="cardTransitionName"
             >
               <TableViewCard
                 v-for="table in column"

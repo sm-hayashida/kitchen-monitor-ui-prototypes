@@ -11,10 +11,11 @@ const fullInfo = Object.freeze([...comparisonInfoKeys]);
 
 export const comparisonDefaults = Object.freeze({
   scenario: 'normal',
+  columnCount: 'auto',
   cardMinWidth: 290,
   rowSpacing: 'standard',
   quantityMode: 'current',
-  quantityDisplayStyle: 'current',
+  quantityDisplayStyle: 'n',
   itemTapMode: 'all',
   orderUndoMs: 3000,
   itemHideMs: 5000,
@@ -35,9 +36,11 @@ export const comparisonRecipeGroups = Object.freeze([
 
 const allCurrentRecipeFields = Object.freeze({
   scenario: 'normal',
+  columnCount: 'auto',
   cardMinWidth: 290,
   rowSpacing: 'standard',
   quantityMode: 'current',
+  quantityDisplayStyle: 'n',
   itemTapMode: 'all',
   orderUndoMs: 3000,
   itemHideMs: 5000,
@@ -250,7 +253,7 @@ export const comparisonIntensityOptions = Object.freeze([
 ]);
 
 export const comparisonQuantityDisplayStyleOptions = Object.freeze([
-  Object.freeze({ id: 'current', label: '現行・左に残数のみ' }),
+  Object.freeze({ id: 'current', label: '旧現行・左に数量' }),
   Object.freeze({ id: 'a', label: 'A 残数量のみ' }),
   Object.freeze({ id: 'b', label: 'B 独立2チップ' }),
   Object.freeze({ id: 'c', label: 'C 強弱つき2チップ' }),
@@ -264,7 +267,7 @@ export const comparisonQuantityDisplayStyleOptions = Object.freeze([
   Object.freeze({ id: 'k', label: 'K 右側・主数量＋横断集計' }),
   Object.freeze({ id: 'l', label: 'L 右側・×残数量' }),
   Object.freeze({ id: 'm', label: 'M 左残数＋計' }),
-  Object.freeze({ id: 'n', label: 'N 左残数／合計' }),
+  Object.freeze({ id: 'n', label: 'N 左残数／合計（現行）' }),
 ]);
 
 export const comparisonItemTapModeOptions = Object.freeze([
@@ -317,6 +320,7 @@ export const comparisonLabels = Object.freeze({
 
 export const comparisonOptions = Object.freeze({
   scenarios: Object.freeze(['normal', 'peak', 'long', 'quantity', 'memo', 'delay']),
+  columnCounts: Object.freeze(['auto', '2', '3', '4']),
   cardMinWidths: Object.freeze([260, 290, 320, 360]),
   rowSpacings: Object.freeze(['compact', 'standard', 'comfortable']),
   quantityModes: Object.freeze(['current', 'remaining', 'progress']),
@@ -335,6 +339,7 @@ export const comparisonOptions = Object.freeze({
 
 export const comparisonQueryKeys = Object.freeze({
   scenario: 'cmp_scenario',
+  columnCount: 'cmp_columns',
   cardMinWidth: 'cmp_card',
   rowSpacing: 'cmp_rows',
   quantityMode: 'cmp_qty',
@@ -367,6 +372,7 @@ const recipeFieldKeys = Object.freeze([
 ]);
 const differenceFieldLabels = Object.freeze({
   scenario: 'シナリオ',
+  columnCount: '列数',
   cardMinWidth: 'カード幅',
   rowSpacing: '行間',
   quantityMode: '数量',
@@ -393,6 +399,11 @@ export function createDefaultComparisonSettings() {
 export function normalizeComparisonSettings(candidate = {}) {
   return {
     scenario: enumValue(candidate.scenario, comparisonOptions.scenarios, comparisonDefaults.scenario),
+    columnCount: enumValue(
+      String(candidate.columnCount ?? ''),
+      comparisonOptions.columnCounts,
+      comparisonDefaults.columnCount,
+    ),
     cardMinWidth: numberValue(
       candidate.cardMinWidth,
       comparisonOptions.cardMinWidths,
@@ -507,6 +518,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   const candidate = {};
 
   assignString(candidate, 'scenario', params.get(comparisonQueryKeys.scenario));
+  assignString(candidate, 'columnCount', params.get(comparisonQueryKeys.columnCount));
   assignNumber(candidate, 'cardMinWidth', params.get(comparisonQueryKeys.cardMinWidth));
   assignString(candidate, 'rowSpacing', params.get(comparisonQueryKeys.rowSpacing));
   assignString(candidate, 'quantityMode', params.get(comparisonQueryKeys.quantityMode));
@@ -541,6 +553,13 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
   });
 
   appendSetting(params, comparisonQueryKeys.scenario, normalized.scenario, comparisonDefaults.scenario, options);
+  appendSetting(
+    params,
+    comparisonQueryKeys.columnCount,
+    normalized.columnCount,
+    comparisonDefaults.columnCount,
+    options,
+  );
   appendSetting(
     params,
     comparisonQueryKeys.cardMinWidth,
@@ -689,6 +708,9 @@ function settingsEqual(left, right) {
 function getComparisonValueLabel(key, value) {
   if (key === 'scenario') {
     return comparisonLabels.scenarios[value];
+  }
+  if (key === 'columnCount') {
+    return value === 'auto' ? '自動' : `${value}列`;
   }
   if (key === 'cardMinWidth') {
     return `${value}px`;

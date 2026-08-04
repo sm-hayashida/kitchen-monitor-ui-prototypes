@@ -11,7 +11,6 @@ export function useResponsiveColumnLayout(
     minColumnHeight = 260,
     minColumnWidth = 290,
     preferredColumnCount = 'auto',
-    reservedHeight = 0,
   } = {},
 ) {
   const columnCount = ref(maxColumnCount);
@@ -20,7 +19,6 @@ export function useResponsiveColumnLayout(
   let resizeObserver;
   let measureFrame;
   let settleFrame;
-  let observedNavigation;
 
   function measure() {
     if (measureFrame !== undefined) {
@@ -35,25 +33,10 @@ export function useResponsiveColumnLayout(
         return;
       }
 
-      const navigation = element.querySelector('.horizontal-scroll-navigation');
-
-      if (navigation !== observedNavigation) {
-        if (observedNavigation) {
-          resizeObserver?.unobserve(observedNavigation);
-        }
-        if (navigation) {
-          resizeObserver?.observe(navigation);
-        }
-        observedNavigation = navigation;
-      }
-
-      const navigationHeight = Math.max(
-        reservedHeight,
-        navigation?.getBoundingClientRect().height ?? 0,
-      );
-      const measuredHeight = Math.floor(element.clientHeight - navigationHeight - contentInset);
+      const measuredHeight = Math.floor(element.clientHeight - contentInset);
+      const resolvedMinColumnWidth = Number(unref(minColumnWidth)) || 290;
       const measuredColumnCount = Math.floor(
-        (element.clientWidth + columnGap) / (minColumnWidth + columnGap),
+        (element.clientWidth + columnGap) / (resolvedMinColumnWidth + columnGap),
       );
       const requestedColumnCount = Number(unref(preferredColumnCount));
       const hasRequestedColumnCount =
@@ -80,9 +63,11 @@ export function useResponsiveColumnLayout(
   });
 
   const stopWatchingPreference = watch(() => unref(preferredColumnCount), measure);
+  const stopWatchingMinimumWidth = watch(() => unref(minColumnWidth), measure);
 
   onBeforeUnmount(() => {
     stopWatchingPreference();
+    stopWatchingMinimumWidth();
     resizeObserver?.disconnect();
     if (measureFrame !== undefined) {
       cancelAnimationFrame(measureFrame);

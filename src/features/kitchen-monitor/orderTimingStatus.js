@@ -53,9 +53,9 @@ export function getOrderTimingStatus(
   };
 }
 
-export function summarizeOrderTimings(orders) {
+export function summarizeOrderTimings(orders, options = {}) {
   const statuses = orders.map((order) =>
-    getOrderTimingStatus(order.ordered_elapsed_minutes),
+    getOrderTimingStatus(order.ordered_elapsed_minutes, options),
   );
   const overdueCount = statuses.filter((status) => status.isOverdue).length;
   const warningCount = statuses.filter((status) => status.isWarning).length;

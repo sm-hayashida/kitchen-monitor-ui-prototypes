@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Clock, Pin } from '@lucide/vue';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   getOrderTimingStatus,
   summarizeOrderTimings,
@@ -60,11 +61,18 @@ defineEmits([
   'toggle-pinned',
 ]);
 
+const comparison = useComparisonStore();
+const timingOptions = computed(() => ({
+  targetMinutes: comparison.settings.targetMinutes,
+  warningWindowMinutes: comparison.settings.warningMinutes,
+}));
+const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
+const itemTransitionName = computed(() => comparison.settings.motion ? 'table-item' : '');
 const isContinuation = computed(() => props.table.segment_index > 1);
 const timingStatus = computed(() =>
-  getOrderTimingStatus(props.table.earliest_elapsed_minutes),
+  getOrderTimingStatus(props.table.earliest_elapsed_minutes, timingOptions.value),
 );
-const timingSummary = computed(() => summarizeOrderTimings(props.table.orders));
+const timingSummary = computed(() => summarizeOrderTimings(props.table.orders, timingOptions.value));
 const pendingQuantity = computed(() =>
   props.table.orders.reduce(
     (tableTotal, order) =>
@@ -84,7 +92,7 @@ const hasOpenItemAction = computed(() =>
 );
 
 function orderGroupTiming(orderGroup) {
-  return getOrderTimingStatus(orderGroup.elapsed_minutes);
+  return getOrderTimingStatus(orderGroup.elapsed_minutes, timingOptions.value);
 }
 </script>
 
@@ -176,11 +184,11 @@ function orderGroupTiming(orderGroup) {
           </em>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
-        <p v-if="orderGroup.order_memo" class="table-order-memo-inline">
+        <p v-if="showOrderMemo && orderGroup.order_memo" class="table-order-memo-inline">
           <strong>注文メモ</strong>
           <span>{{ orderGroup.order_memo }}</span>
         </p>
-        <TransitionGroup tag="div" class="table-order-items" name="table-item">
+        <TransitionGroup tag="div" class="table-order-items" :name="itemTransitionName">
           <OrderItemRow
             v-for="orderItem in orderGroup.items"
             :key="orderItem.order_item_id"

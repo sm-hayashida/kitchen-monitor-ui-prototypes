@@ -17,6 +17,7 @@ export function createComparisonStore(initialHash = window.location.hash) {
   const enabledInfo = computed(() => new Set(settings.info));
   const resetKey = computed(() => [
     settings.scenario,
+    settings.columnCount,
     settings.cardMinWidth,
     settings.rowSpacing,
     settings.quantityMode,

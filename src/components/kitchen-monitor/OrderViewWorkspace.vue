@@ -2,11 +2,17 @@
 import { ListFilter } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { createOrderCardSegments } from '../../features/kitchen-monitor/orderCardSegments';
-import { createOrderedMasonryPages } from '../../features/kitchen-monitor/orderMasonryLayout';
+import {
+  createOrderedMasonryPages,
+  estimateOrderCardHeight,
+} from '../../features/kitchen-monitor/orderMasonryLayout';
+import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
+import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { useColumnLayoutPreference } from '../../features/kitchen-monitor/useColumnLayoutPreference';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
+import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
@@ -30,13 +36,35 @@ defineEmits(['switch-view']);
 const currentPage = ref(1);
 const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
+const horizontalScrollerRef = ref(null);
+const horizontalNavigation = ref({
+  canNext: false,
+  canPrevious: false,
+  firstVisibleColumn: 0,
+  lastVisibleColumn: 0,
+  scrollProgress: 1,
+  totalColumnCount: 0,
+});
 const isPaged = computed(() => props.layout === 'n-paged');
 const isScroll = computed(() => props.layout === 'n-scroll');
+const comparison = useComparisonStore();
+const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
+const comparisonPageClass = computed(() => [
+  'order-view-layout',
+  `comparison-rows-${comparison.settings.rowSpacing}`,
+  comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
+].join(' '));
+const cardTransitionName = computed(() => comparison.settings.motion ? 'masonry-card' : '');
+const cardEstimateOptions = computed(() => ({
+  cardMinWidth: comparison.settings.cardMinWidth,
+  rowSpacing: comparison.settings.rowSpacing,
+  visibleInfo: comparison.settings.info,
+}));
 const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   preferredColumnCount: columnCountPreference,
-  reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
 });
 
 const {
@@ -59,7 +87,11 @@ const {
   toggleItemAction,
   toggleOrderCompletion,
   visibleOrders,
-} = useOrderViewMock();
+} = useOrderViewMock({
+  initialOrders: scenarioOrders,
+  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
+  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
+});
 
 const {
   departments,
@@ -82,11 +114,13 @@ const departmentFilteredOrders = computed(() =>
 const layoutOrders = computed(() =>
   createOrderCardSegments(departmentFilteredOrders.value, props.layout, {
     maxCardHeight: columnHeight.value,
+    estimateOptions: cardEstimateOptions.value,
   }),
 );
 const pagedOrderColumns = computed(() =>
   createOrderedMasonryPages(layoutOrders.value, {
     columnCount: columnCount.value,
+    estimateCardHeight: (order) => estimateOrderCardHeight(order, cardEstimateOptions.value),
     maxColumnHeight: columnHeight.value,
   }),
 );
@@ -121,6 +155,14 @@ function setPage(nextPage) {
   currentPage.value = Math.min(pageCount.value, Math.max(1, nextPage));
 }
 
+function updateHorizontalNavigation(state) {
+  horizontalNavigation.value = state;
+}
+
+function scrollOrderByColumn(direction) {
+  horizontalScrollerRef.value?.scrollByColumn(direction);
+}
+
 function saveDepartmentSettings(departmentIds, preferences = {}) {
   saveDepartments(departmentIds);
   if (preferences.columnCountPreference !== undefined) {
@@ -138,13 +180,25 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
     :categories="[]"
     external-settings
     :now-ms="nowMs"
-    page-class="order-view-layout"
+    :page-class="comparisonPageClass"
     :show-navigation="false"
     :toast="toast"
     @open-settings="isSettingsOpen = true"
     @switch-view="$emit('switch-view', $event)"
   >
     <template #header-actions>
+      <HeaderLayoutNavigation
+        v-if="isScroll"
+        mode="horizontal"
+        :can-next="horizontalNavigation.canNext"
+        :can-previous="horizontalNavigation.canPrevious"
+        :first-visible-column="horizontalNavigation.firstVisibleColumn"
+        :last-visible-column="horizontalNavigation.lastVisibleColumn"
+        :scroll-progress="horizontalNavigation.scrollProgress"
+        :total-column-count="horizontalNavigation.totalColumnCount"
+        @previous-column="scrollOrderByColumn(-1)"
+        @next-column="scrollOrderByColumn(1)"
+      />
       <button
         class="top-bar-icon-button top-bar-filter-button"
         type="button"
@@ -165,16 +219,18 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
       <div ref="layoutBodyRef" class="order-layout-body" :class="layout">
         <HorizontalColumnScroller
           v-if="isLayoutReady && isScroll"
+          ref="horizontalScrollerRef"
           class="order-horizontal-scroller"
           aria-label="注文一覧を横スクロール"
           :column-count="columnCount"
           :columns="scrollOrderColumns"
+          @navigation-state-change="updateHorizontalNavigation"
         >
           <template #column="{ column }">
             <TransitionGroup
               tag="div"
               class="horizontal-column-stack"
-              name="masonry-card"
+              :name="cardTransitionName"
             >
               <OrderViewCard
                 v-for="order in column"
