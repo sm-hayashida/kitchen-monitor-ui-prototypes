@@ -1,6 +1,6 @@
 <script setup>
-import { Check, Clipboard, RotateCcw, SlidersHorizontal, X } from '@lucide/vue';
-import { computed, nextTick, ref, watch } from 'vue';
+import { Check, Clipboard, Plus, RotateCcw, SlidersHorizontal, Trash2, X } from '@lucide/vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import {
   comparisonInfoKeys,
   comparisonIntensityOptions,
@@ -18,6 +18,13 @@ import {
 } from '../../features/kitchen-monitor/comparisonConfig';
 import { createQuantityDisplayModel } from '../../features/kitchen-monitor/quantityDisplay';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
+import {
+  createDefaultReviewOrderDraft,
+  createReviewOrderPresetDraft,
+  reviewOrderCategoryOptions,
+  reviewOrderQuickPresets,
+  summarizeReviewOrderDraft,
+} from '../../features/kitchen-monitor/comparisonReviewOrders';
 import { viewModeGroups } from '../../features/kitchen-monitor/viewModeOptions';
 
 const props = defineProps({
@@ -31,11 +38,20 @@ const emit = defineEmits(['switch-view']);
 const comparison = useComparisonStore();
 const copied = ref(false);
 const closeButtonRef = ref(null);
+const reviewOrderDraft = reactive(createDefaultReviewOrderDraft(1));
 let copiedTimer;
 
 const isOpen = computed(() => comparison.isPanelOpen.value);
 const selectedRecipe = computed(() => getActiveComparisonRecipe(comparison.settings));
 const differenceSummary = computed(() => getComparisonDifferenceSummary(comparison.settings));
+const reviewOrderSummaries = computed(() =>
+  comparison.reviewOrderDrafts.value.map((draft, index) =>
+    summarizeReviewOrderDraft(draft, index + 1),
+  ),
+);
+const reviewOrderLimitReached = computed(
+  () => reviewOrderSummaries.value.length >= comparison.maxReviewOrderCount,
+);
 const groupedRecipes = computed(() =>
   comparisonRecipeGroups.map((group) => ({
     ...group,
@@ -90,6 +106,22 @@ function updateText(key, event) {
 
 function updateMotion(event) {
   comparison.setField('motion', event.target.value === 'on');
+}
+
+function addReviewOrder() {
+  const added = comparison.addReviewOrder(reviewOrderDraft);
+  if (added) {
+    reviewOrderDraft.tableNo = `R${reviewOrderSummaries.value.length + 1}`;
+  }
+}
+
+function addReviewOrderPreset(presetId) {
+  const added = comparison.addReviewOrder(
+    createReviewOrderPresetDraft(presetId, reviewOrderSummaries.value.length + 1),
+  );
+  if (added) {
+    reviewOrderDraft.tableNo = `R${reviewOrderSummaries.value.length + 1}`;
+  }
 }
 
 function openPanel() {
@@ -158,14 +190,17 @@ async function copyShareUrl() {
     <div class="comparison-status-summary" aria-live="polite">
       <div>
         <span>選択レシピ</span>
-        <strong>{{ differenceSummary.activeRecipeLabel }}</strong>
+        <strong>
+          {{ differenceSummary.activeRecipeLabel }}{{ reviewOrderSummaries.length ? '＋追加注文' : '' }}
+        </strong>
       </div>
       <div>
         <span>現行との差分</span>
-        <strong>{{ differenceSummary.differenceCount }}件</strong>
+        <strong>{{ differenceSummary.differenceCount + reviewOrderSummaries.length }}件</strong>
       </div>
       <div class="comparison-difference-chips">
         <span v-for="chip in differenceSummary.chips" :key="chip">{{ chip }}</span>
+        <span v-if="reviewOrderSummaries.length">追加注文:{{ reviewOrderSummaries.length }}件</span>
         <span v-if="differenceSummary.extraCount > 0">ほか{{ differenceSummary.extraCount }}件</span>
       </div>
       <small>既定：N 左残数／合計・数量はその場で変更・行タップで全完了</small>
@@ -274,7 +309,124 @@ async function copyShareUrl() {
 
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
-          <div><span>05</span><h3>密度</h3></div>
+          <div><span>05</span><h3>レビュー注文</h3></div>
+          <p>現在のシナリオに具体的な確認用注文を追加します</p>
+        </header>
+
+        <div class="review-order-quick-grid">
+          <button
+            v-for="preset in reviewOrderQuickPresets"
+            :key="preset.id"
+            type="button"
+            :disabled="reviewOrderLimitReached"
+            @click="addReviewOrderPreset(preset.id)"
+          >
+            <Plus :size="15" aria-hidden="true" />
+            <strong>{{ preset.label }}</strong>
+            <span>{{ preset.description }}</span>
+          </button>
+        </div>
+
+        <details class="review-order-custom-builder" open>
+          <summary>内容を指定して追加</summary>
+          <form @submit.prevent="addReviewOrder">
+            <div class="review-order-form-grid">
+              <label>
+                <span>テーブル</span>
+                <input v-model="reviewOrderDraft.tableNo" type="text" maxlength="12" aria-label="テーブル" required />
+              </label>
+              <label>
+                <span>経過時間</span>
+                <input v-model.number="reviewOrderDraft.elapsedMinutes" type="number" min="0" max="60" aria-label="経過時間" />
+              </label>
+              <label>
+                <span>人数</span>
+                <input v-model.number="reviewOrderDraft.guestCount" type="number" min="1" max="20" aria-label="人数" />
+              </label>
+              <label class="wide">
+                <span>商品名</span>
+                <input v-model="reviewOrderDraft.itemName" type="text" maxlength="40" aria-label="商品名" required />
+              </label>
+              <label>
+                <span>商品数</span>
+                <input v-model.number="reviewOrderDraft.itemCount" type="number" min="1" max="6" aria-label="商品数" />
+              </label>
+              <label>
+                <span>各商品の数量</span>
+                <input v-model.number="reviewOrderDraft.quantity" type="number" min="1" max="20" aria-label="各商品の数量" />
+              </label>
+              <label class="wide">
+                <span>部門</span>
+                <select v-model="reviewOrderDraft.categoryId" aria-label="部門">
+                  <option v-for="category in reviewOrderCategoryOptions" :key="category.id" :value="category.id">
+                    {{ category.label }}
+                  </option>
+                </select>
+              </label>
+              <label class="review-order-checkbox wide">
+                <input v-model="reviewOrderDraft.courseEnabled" type="checkbox" aria-label="コース注文にする" />
+                <span>コース注文にする</span>
+              </label>
+              <label v-if="reviewOrderDraft.courseEnabled" class="wide">
+                <span>コース名</span>
+                <input v-model="reviewOrderDraft.courseName" type="text" maxlength="30" aria-label="コース名" required />
+              </label>
+              <label>
+                <span>トッピング数</span>
+                <input v-model.number="reviewOrderDraft.toppingCount" type="number" min="0" max="20" aria-label="トッピング数" />
+              </label>
+              <label>
+                <span>商品メモ文字数</span>
+                <input v-model.number="reviewOrderDraft.itemMemoLength" type="number" min="0" max="500" aria-label="商品メモ文字数" />
+              </label>
+              <label>
+                <span>注文メモ文字数</span>
+                <input v-model.number="reviewOrderDraft.orderMemoLength" type="number" min="0" max="500" aria-label="注文メモ文字数" />
+              </label>
+            </div>
+            <button
+              class="review-order-add-button"
+              type="submit"
+              :disabled="reviewOrderLimitReached"
+            >
+              <Plus :size="16" aria-hidden="true" />
+              この内容で追加
+            </button>
+          </form>
+        </details>
+
+        <div v-if="reviewOrderSummaries.length" class="review-order-added-list">
+          <header>
+            <div>
+              <strong>追加済み {{ reviewOrderSummaries.length }}件</strong>
+              <span>共有URLにも含まれます</span>
+            </div>
+            <button type="button" @click="comparison.clearReviewOrders">
+              <Trash2 :size="14" aria-hidden="true" />
+              全削除
+            </button>
+          </header>
+          <article v-for="order in reviewOrderSummaries" :key="order.id">
+            <div>
+              <strong>{{ order.tableNo }}・{{ order.itemName }}</strong>
+              <span>{{ order.features.join(' / ') }}</span>
+            </div>
+            <button
+              type="button"
+              :aria-label="`${order.tableNo}の追加注文を削除`"
+              @click="comparison.removeReviewOrder(order.id)"
+            >
+              <X :size="16" aria-hidden="true" />
+            </button>
+          </article>
+        </div>
+        <p v-else class="review-order-empty">追加注文はありません</p>
+        <small class="review-order-limit">最大{{ comparison.maxReviewOrderCount }}件</small>
+      </section>
+
+      <section class="comparison-control-section">
+        <header class="comparison-section-heading">
+          <div><span>06</span><h3>密度</h3></div>
           <p>列数・カード幅・行間を独立して試せます</p>
         </header>
         <div class="comparison-segmented-control" role="group" aria-label="カード列数">
@@ -309,7 +461,7 @@ async function copyShareUrl() {
 
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
-          <div><span>06</span><h3>表示情報</h3></div>
+          <div><span>07</span><h3>表示情報</h3></div>
           <p>数量表現とカード内に出す情報を比較します</p>
         </header>
         <label>
@@ -381,7 +533,7 @@ async function copyShareUrl() {
 
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
-          <div><span>07</span><h3>操作と時間</h3></div>
+          <div><span>08</span><h3>操作と時間</h3></div>
           <p>数量アクセス・完了方法・取消猶予・警告時刻を試します</p>
         </header>
         <label>

@@ -51,7 +51,10 @@ const comparison = useComparisonStore();
 const quantitySelectionInAggregate = computed(
   () => comparison.settings.quantityInteractionMode === 'aggregate',
 );
-const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
+const scenarioOrders = computed(() => [
+  ...createScenarioOrders(comparison.settings.scenario),
+  ...comparison.reviewOrders.value,
+]);
 const comparisonPageClass = computed(() => [
   'order-view-layout',
   `comparison-rows-${comparison.settings.rowSpacing}`,

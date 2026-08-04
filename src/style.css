@@ -4841,6 +4841,242 @@ button {
   line-height: 1.35;
 }
 
+.review-order-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.review-order-quick-grid button {
+  display: grid;
+  min-height: 82px;
+  align-content: start;
+  gap: 4px;
+  border: 1px solid #dbe2ea;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: var(--theme-accent-strong);
+  cursor: pointer;
+  padding: 8px;
+  text-align: left;
+}
+
+.review-order-quick-grid button strong {
+  color: #1f2937;
+  font-size: 10px;
+}
+
+.review-order-quick-grid button span {
+  color: #64748b;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.review-order-quick-grid button:hover {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-surface);
+}
+
+.review-order-quick-grid button:disabled,
+.review-order-add-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.review-order-custom-builder {
+  overflow: hidden;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  margin-top: 8px;
+  background: #ffffff;
+}
+
+.review-order-custom-builder > summary {
+  min-height: 42px;
+  border-bottom: 1px solid transparent;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 42px;
+  padding: 0 10px;
+}
+
+.review-order-custom-builder[open] > summary {
+  border-bottom-color: #e2e8f0;
+}
+
+.review-order-custom-builder form {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+}
+
+.review-order-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.review-order-form-grid label {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 4px;
+}
+
+.review-order-form-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.review-order-form-grid label > span {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.review-order-form-grid input[type='text'],
+.review-order-form-grid input[type='number'],
+.review-order-form-grid select {
+  width: 100%;
+  height: 36px;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 750;
+  padding: 0 9px;
+}
+
+.review-order-form-grid .review-order-checkbox {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe2ea;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 0 10px;
+}
+
+.review-order-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--theme-accent);
+}
+
+.review-order-add-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--theme-accent);
+  border-radius: 7px;
+  background: var(--theme-accent);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.review-order-added-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.review-order-added-list > header,
+.review-order-added-list > article {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-order-added-list > header {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 4px 0 7px;
+}
+
+.review-order-added-list > header > div,
+.review-order-added-list > article > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.review-order-added-list strong {
+  overflow: hidden;
+  color: #1f2937;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-order-added-list span {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 8px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-order-added-list button {
+  display: inline-flex;
+  min-height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 850;
+  padding: 0 8px;
+}
+
+.review-order-added-list > article {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 7px 7px 7px 9px;
+}
+
+.review-order-added-list > article button {
+  width: 34px;
+  padding: 0;
+}
+
+.review-order-empty {
+  margin: 9px 0 0;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 750;
+  padding: 10px;
+  text-align: center;
+}
+
+.review-order-limit {
+  display: block;
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 750;
+  text-align: right;
+}
+
 .comparison-color-preview {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

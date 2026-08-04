@@ -27,7 +27,11 @@ const activePage = computed(() => pages[activeView.value] ?? pages[defaultView])
 const comparison = createComparisonStore(window.location.hash);
 provideComparisonStore(comparison);
 const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
-const activePageKey = computed(() => `${activeView.value}:${comparison.settings.scenario}`);
+const activePageKey = computed(() => [
+  activeView.value,
+  comparison.settings.scenario,
+  comparison.reviewOrderRevision.value,
+].join(':'));
 const comparisonTokenClasses = computed(() => [
   'comparison-token-root',
   `comparison-theme-${comparison.settings.theme}`,
@@ -56,7 +60,10 @@ onMounted(() => window.addEventListener('hashchange', syncView));
 onUnmounted(() => window.removeEventListener('hashchange', syncView));
 
 watch(
-  () => comparison.resetKey.value,
+  [
+    () => comparison.resetKey.value,
+    () => comparison.reviewOrderRevision.value,
+  ],
   () => {
     if (isSyncingHash) {
       return;

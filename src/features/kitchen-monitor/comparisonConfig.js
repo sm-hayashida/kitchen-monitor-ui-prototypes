@@ -1,3 +1,5 @@
+import { normalizeReviewOrderDrafts } from './comparisonReviewOrders.js';
+
 export const comparisonInfoKeys = [
   'course',
   'options',
@@ -392,7 +394,13 @@ export const comparisonQueryKeys = Object.freeze({
   intensity: 'cmp_intensity',
 });
 
-const supportedQueryKeys = new Set([...Object.values(comparisonQueryKeys), 'compare']);
+export const comparisonReviewOrdersQueryKey = 'cmp_orders';
+
+const supportedQueryKeys = new Set([
+  ...Object.values(comparisonQueryKeys),
+  comparisonReviewOrdersQueryKey,
+  'compare',
+]);
 const recipeFieldKeys = Object.freeze([
   'scenario',
   'cardMinWidth',
@@ -581,6 +589,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   return {
     route,
     settings: normalizeComparisonSettings(candidate),
+    reviewOrders: parseReviewOrdersParam(params.get(comparisonReviewOrdersQueryKey)),
     openPanel: params.get('compare') === '1',
     unknownQueryEntries: [...params.entries()].filter(([key]) => !supportedQueryKeys.has(key)),
   };
@@ -667,6 +676,7 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
   appendSetting(params, comparisonQueryKeys.theme, normalized.theme, comparisonDefaults.theme, options);
   appendSetting(params, comparisonQueryKeys.urgency, normalized.urgency, comparisonDefaults.urgency, options);
   appendSetting(params, comparisonQueryKeys.intensity, normalized.intensity, comparisonDefaults.intensity, options);
+  appendReviewOrders(params, options.reviewOrders);
 
   if (options.openPanel) {
     params.set('compare', '1');
@@ -747,6 +757,25 @@ function appendInfo(params, info, options) {
   const value = info.join(',');
   if (options.includeDefaults || value !== defaultValue) {
     params.set(comparisonQueryKeys.info, value);
+  }
+}
+
+function appendReviewOrders(params, reviewOrders) {
+  const normalized = normalizeReviewOrderDrafts(reviewOrders);
+  if (normalized.length > 0) {
+    params.set(comparisonReviewOrdersQueryKey, JSON.stringify(normalized));
+  }
+}
+
+function parseReviewOrdersParam(value) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    return normalizeReviewOrderDrafts(JSON.parse(value));
+  } catch {
+    return [];
   }
 }
 
