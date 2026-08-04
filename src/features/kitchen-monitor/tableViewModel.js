@@ -2,33 +2,12 @@ import { estimateOrderItemHeight } from './orderCardSegments.js';
 
 const DEFAULT_TABLE_CONTENT_BUDGET = 320;
 const TABLE_CARD_HEADER_HEIGHT = 43;
-const TABLE_CONTINUATION_HEADER_HEIGHT = 31;
 const TABLE_CARD_SUMMARY_HEIGHT = 31;
 const TABLE_CARD_BORDER_HEIGHT = 2;
-const TABLE_CARD_MEASUREMENT_TOLERANCE = 8;
+const TABLE_CARD_MEASUREMENT_TOLERANCE = 6;
 const TABLE_CARD_CHROME_HEIGHT =
   TABLE_CARD_HEADER_HEIGHT + TABLE_CARD_SUMMARY_HEIGHT + TABLE_CARD_BORDER_HEIGHT;
 const ORDER_GROUP_HEADER_HEIGHT = 25;
-const ORDER_GROUP_MEMO_LABEL_WIDTH = 46;
-const ORDER_GROUP_MEMO_BASE_HEIGHT = 27;
-
-function estimateOrderGroupMemoHeight(orderMemo, { cardMinWidth = 290 } = {}) {
-  if (!orderMemo) {
-    return 0;
-  }
-
-  const textColumnWidth = Math.max(96, Number(cardMinWidth) - ORDER_GROUP_MEMO_LABEL_WIDTH - 30);
-  const charactersPerLine = Math.max(9, Math.floor(textColumnWidth / 6));
-  return ORDER_GROUP_MEMO_BASE_HEIGHT +
-    Math.max(0, Math.ceil(String(orderMemo).length / charactersPerLine) - 1) * 14;
-}
-
-function isOrderMemoVisible(visibleInfo) {
-  const info = visibleInfo instanceof Set
-    ? visibleInfo
-    : new Set(visibleInfo ?? ['course', 'options', 'itemMemo', 'orderMemo', 'aggregate', 'bulkComplete']);
-  return info.has('orderMemo');
-}
 
 function tableNumber(tableNo) {
   return Number.parseInt(tableNo.replace(/\D/g, ''), 10) || Number.MAX_SAFE_INTEGER;
@@ -161,33 +140,24 @@ function createOrderGroups(entries) {
   }, []);
 }
 
-function estimateEntriesHeight(entries, estimateOptions = {}) {
+function estimateEntriesHeight(entries) {
   let previousOrderId = null;
 
   return entries.reduce((height, { order, orderItem }) => {
-    const isFirstOrderEntry = order.id !== previousOrderId;
-    const dividerHeight = isFirstOrderEntry ? ORDER_GROUP_HEADER_HEIGHT : 0;
-    const memoHeight = isFirstOrderEntry && isOrderMemoVisible(estimateOptions.visibleInfo)
-      ? estimateOrderGroupMemoHeight(order.order_memo, estimateOptions)
-      : 0;
+    const dividerHeight = order.id === previousOrderId ? 0 : ORDER_GROUP_HEADER_HEIGHT;
     previousOrderId = order.id;
-    return height + dividerHeight + memoHeight + estimateOrderItemHeight(orderItem, estimateOptions);
+    return height + dividerHeight + estimateOrderItemHeight(orderItem);
   }, 0);
 }
 
-function takeEntriesWithinHeight(entries, contentBudget, estimateOptions = {}) {
+function takeEntriesWithinHeight(entries, contentBudget) {
   const chunk = [];
   let chunkHeight = 0;
   let previousOrderId = null;
 
   for (const entry of entries) {
-    const isFirstOrderEntry = entry.order.id !== previousOrderId;
-    const dividerHeight = isFirstOrderEntry ? ORDER_GROUP_HEADER_HEIGHT : 0;
-    const memoHeight = isFirstOrderEntry && isOrderMemoVisible(estimateOptions.visibleInfo)
-      ? estimateOrderGroupMemoHeight(entry.order.order_memo, estimateOptions)
-      : 0;
-    const additionalHeight =
-      dividerHeight + memoHeight + estimateOrderItemHeight(entry.orderItem, estimateOptions);
+    const dividerHeight = entry.order.id === previousOrderId ? 0 : ORDER_GROUP_HEADER_HEIGHT;
+    const additionalHeight = dividerHeight + estimateOrderItemHeight(entry.orderItem);
 
     if (chunk.length > 0 && chunkHeight + additionalHeight > contentBudget) {
       break;
@@ -201,50 +171,30 @@ function takeEntriesWithinHeight(entries, contentBudget, estimateOptions = {}) {
   return [chunk, entries.slice(chunk.length)];
 }
 
-function splitTableEntries(entries, maxCardHeight, estimateOptions = {}) {
+function splitTableEntries(entries, maxCardHeight) {
   const fullCardBudget = Math.max(
     ORDER_GROUP_HEADER_HEIGHT + 43,
-    Math.floor(maxCardHeight - TABLE_CARD_CHROME_HEIGHT - TABLE_CARD_MEASUREMENT_TOLERANCE),
+    Math.floor(maxCardHeight - TABLE_CARD_CHROME_HEIGHT),
   );
 
-  if (estimateEntriesHeight(entries, estimateOptions) <= fullCardBudget) {
+  if (estimateEntriesHeight(entries) <= fullCardBudget) {
     return [entries];
   }
 
   const firstCardBudget = Math.max(
     ORDER_GROUP_HEADER_HEIGHT + 43,
-    Math.floor(
-      maxCardHeight -
-        TABLE_CARD_HEADER_HEIGHT -
-        TABLE_CARD_BORDER_HEIGHT -
-        TABLE_CARD_MEASUREMENT_TOLERANCE,
-    ),
+    Math.floor(maxCardHeight - TABLE_CARD_HEADER_HEIGHT - TABLE_CARD_BORDER_HEIGHT),
   );
   const middleCardBudget = Math.max(
     ORDER_GROUP_HEADER_HEIGHT + 43,
-    Math.floor(
-      maxCardHeight -
-        TABLE_CONTINUATION_HEADER_HEIGHT -
-        TABLE_CARD_BORDER_HEIGHT -
-        TABLE_CARD_MEASUREMENT_TOLERANCE,
-    ),
+    Math.floor(maxCardHeight - TABLE_CARD_BORDER_HEIGHT),
   );
   const lastCardBudget = Math.max(
     ORDER_GROUP_HEADER_HEIGHT + 43,
-    Math.floor(
-      maxCardHeight -
-        TABLE_CONTINUATION_HEADER_HEIGHT -
-        TABLE_CARD_SUMMARY_HEIGHT -
-        TABLE_CARD_BORDER_HEIGHT -
-        TABLE_CARD_MEASUREMENT_TOLERANCE,
-    ),
+    Math.floor(maxCardHeight - TABLE_CARD_SUMMARY_HEIGHT - TABLE_CARD_BORDER_HEIGHT),
   );
   const chunks = [];
-  let [firstChunk, remainingEntries] = takeEntriesWithinHeight(
-    entries,
-    firstCardBudget,
-    estimateOptions,
-  );
+  let [firstChunk, remainingEntries] = takeEntriesWithinHeight(entries, firstCardBudget);
 
   if (remainingEntries.length === 0) {
     if (firstChunk.length === 1) {
@@ -256,7 +206,7 @@ function splitTableEntries(entries, maxCardHeight, estimateOptions = {}) {
   chunks.push(firstChunk);
 
   while (remainingEntries.length > 0) {
-    if (estimateEntriesHeight(remainingEntries, estimateOptions) <= lastCardBudget) {
+    if (estimateEntriesHeight(remainingEntries) <= lastCardBudget) {
       chunks.push(remainingEntries);
       break;
     }
@@ -264,7 +214,6 @@ function splitTableEntries(entries, maxCardHeight, estimateOptions = {}) {
     let [middleChunk, nextEntries] = takeEntriesWithinHeight(
       remainingEntries,
       middleCardBudget,
-      estimateOptions,
     );
 
     if (nextEntries.length === 0 && middleChunk.length > 1) {
@@ -278,17 +227,13 @@ function splitTableEntries(entries, maxCardHeight, estimateOptions = {}) {
   return chunks;
 }
 
-export function estimateTableCardHeight(table, estimateOptions = {}) {
+export function estimateTableCardHeight(table) {
   const contentHeight = table.order_groups.reduce(
     (height, orderGroup) =>
       height +
       ORDER_GROUP_HEADER_HEIGHT +
-      (isOrderMemoVisible(estimateOptions.visibleInfo)
-        ? estimateOrderGroupMemoHeight(orderGroup.order_memo, estimateOptions)
-        : 0) +
       orderGroup.items.reduce(
-        (itemHeight, orderItem) =>
-          itemHeight + estimateOrderItemHeight(orderItem, estimateOptions),
+        (itemHeight, orderItem) => itemHeight + estimateOrderItemHeight(orderItem),
         0,
       ),
     0,
@@ -297,23 +242,19 @@ export function estimateTableCardHeight(table, estimateOptions = {}) {
   return (
     contentHeight +
     (table.is_first_segment ? TABLE_CARD_HEADER_HEIGHT : 0) +
-    (!table.is_first_segment ? TABLE_CONTINUATION_HEADER_HEIGHT : 0) +
     (table.is_last_segment ? TABLE_CARD_SUMMARY_HEIGHT : 0) +
     TABLE_CARD_BORDER_HEIGHT +
     TABLE_CARD_MEASUREMENT_TOLERANCE
   );
 }
 
-export function createTableCardSegments(tableGroups, {
-  maxCardHeight,
-  estimateOptions = {},
-} = {}) {
+export function createTableCardSegments(tableGroups, { maxCardHeight } = {}) {
   return tableGroups.flatMap((table) => {
     const entries = createOrderEntries(table);
     let chunks;
 
     if (Number.isFinite(maxCardHeight)) {
-      chunks = splitTableEntries(entries, maxCardHeight, estimateOptions);
+      chunks = splitTableEntries(entries, maxCardHeight);
     } else {
       chunks = [];
       let remainingEntries = entries;
@@ -322,7 +263,6 @@ export function createTableCardSegments(tableGroups, {
         const [chunk, nextEntries] = takeEntriesWithinHeight(
           remainingEntries,
           DEFAULT_TABLE_CONTENT_BUDGET,
-          estimateOptions,
         );
         chunks.push(chunk);
         remainingEntries = nextEntries;

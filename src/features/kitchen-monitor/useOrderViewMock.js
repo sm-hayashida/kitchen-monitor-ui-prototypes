@@ -1,6 +1,6 @@
-import { computed, onBeforeUnmount, ref, toValue } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import {
-  orderCompletionWindowMs as defaultOrderCompletionWindowMs,
+  orderCompletionWindowMs,
   orderViewCategoryDefinitions,
   orderViewMockOrders,
 } from './orderViewMockData';
@@ -8,25 +8,18 @@ import {
   getOrderItemAggregateKey,
   getOrderItemDisplayName,
 } from './orderItemPresentation';
-import { createItemCompletionQuantity } from './itemActionRules';
 
 const itemCompletionWindowMs = 5000;
 
-export function useOrderViewMock({
-  initialOrders = orderViewMockOrders,
-  orderCompletionDurationMs = defaultOrderCompletionWindowMs,
-  itemCompletionDurationMs = itemCompletionWindowMs,
-} = {}) {
-  const orders = ref(structuredClone(toValue(initialOrders)));
+export function useOrderViewMock() {
+  const orders = ref(structuredClone(orderViewMockOrders));
   const selectedCategoryId = ref('all');
   const selectedAggregateKey = ref(null);
-  const selectedAggregateOriginItemId = ref(null);
+  const selectedItemId = ref(null);
+  const selectedItemAnchor = ref(null);
   const activeItemActionId = ref(null);
   const completionStartedAt = ref({});
-  const completionDurationByOrderId = ref({});
   const itemCompletionStartedAt = ref({});
-  const itemCompletionDurationByItemId = ref({});
-  const itemCompletionHideByItemId = ref({});
   const itemCompletionPreviousQuantityByItemId = ref({});
   const hiddenCompletedItemIds = ref(new Set());
   const processedUnitNumbersByItemId = ref({});
@@ -35,13 +28,6 @@ export function useOrderViewMock({
   const completionTimers = new Map();
   const itemCompletionTimers = new Map();
   let toastTimer;
-
-  const completionWindowMs = computed(() =>
-    normalizeDurationMs(orderCompletionDurationMs, defaultOrderCompletionWindowMs),
-  );
-  const tableItemCompletionWindowMs = computed(() =>
-    normalizeDurationMs(itemCompletionDurationMs, itemCompletionWindowMs),
-  );
 
   const clockTimer = window.setInterval(() => {
     nowMs.value = Date.now();
@@ -126,27 +112,61 @@ export function useOrderViewMock({
   const selectedAggregate = computed(
     () => aggregateByKey.value[selectedAggregateKey.value] ?? null,
   );
+  const selectedItemDetail = computed(() => {
+    if (!selectedItemId.value) {
+      return null;
+    }
+
+    for (const order of orders.value) {
+      const orderItem = order.items.find(
+        (candidate) => candidate.order_item_id === selectedItemId.value,
+      );
+
+      if (orderItem) {
+        const aggregateKey = getOrderItemAggregateKey(orderItem);
+        return {
+          aggregate: aggregateByKey.value[aggregateKey] ?? null,
+          order,
+          orderItem,
+          processedCount:
+            processedUnitNumbersByItemId.value[orderItem.order_item_id]?.length ?? 0,
+        };
+      }
+    }
+
+    return null;
+  });
 
   function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId;
   }
 
-  function openAggregate(payload) {
-    const aggregateKey = typeof payload === 'string' ? payload : payload?.aggregateKey;
-
-    if (!aggregateKey) {
-      return;
-    }
-
+  function openAggregate(aggregateKey) {
     closeItemAction();
+    closeItemDetail();
     selectedAggregateKey.value = aggregateKey;
-    selectedAggregateOriginItemId.value =
-      typeof payload === 'string' ? null : payload?.originOrderItemId ?? null;
   }
 
   function closeAggregate() {
     selectedAggregateKey.value = null;
-    selectedAggregateOriginItemId.value = null;
+  }
+
+  function openItemDetail({ orderItemId, anchorRect }) {
+    closeItemAction();
+    closeAggregate();
+
+    if (selectedItemId.value === orderItemId) {
+      closeItemDetail();
+      return;
+    }
+
+    selectedItemId.value = orderItemId;
+    selectedItemAnchor.value = anchorRect;
+  }
+
+  function closeItemDetail() {
+    selectedItemId.value = null;
+    selectedItemAnchor.value = null;
   }
 
   function toggleItemAction(orderItemId) {
@@ -164,19 +184,6 @@ export function useOrderViewMock({
       .find((item) => item.order_item_id === orderItemId);
   }
 
-  function openAggregateForItem(orderItemId) {
-    const orderItem = findOrderItem(orderItemId);
-
-    if (!orderItem) {
-      return;
-    }
-
-    openAggregate({
-      aggregateKey: getOrderItemAggregateKey(orderItem),
-      originOrderItemId: orderItemId,
-    });
-  }
-
   function clearItemCompletion(orderItemId) {
     window.clearTimeout(itemCompletionTimers.get(orderItemId));
     itemCompletionTimers.delete(orderItemId);
@@ -184,12 +191,6 @@ export function useOrderViewMock({
     const nextStartedAt = { ...itemCompletionStartedAt.value };
     delete nextStartedAt[orderItemId];
     itemCompletionStartedAt.value = nextStartedAt;
-    const nextDurations = { ...itemCompletionDurationByItemId.value };
-    delete nextDurations[orderItemId];
-    itemCompletionDurationByItemId.value = nextDurations;
-    const nextHideByItemId = { ...itemCompletionHideByItemId.value };
-    delete nextHideByItemId[orderItemId];
-    itemCompletionHideByItemId.value = nextHideByItemId;
 
     const nextPreviousQuantities = {
       ...itemCompletionPreviousQuantityByItemId.value,
@@ -223,9 +224,8 @@ export function useOrderViewMock({
     }
 
     const previousQuantity = processedUnitNumbersByItemId.value[orderItemId]?.length ?? 0;
-    const reachesCompletion =
-      nextQuantity === orderItem.quantity && previousQuantity < orderItem.quantity;
-    if (!keepOpen || reachesCompletion) {
+    const reachesHiddenCompletion = hideWhenComplete && nextQuantity === orderItem.quantity;
+    if (!keepOpen || reachesHiddenCompletion) {
       closeItemAction();
     }
 
@@ -239,26 +239,10 @@ export function useOrderViewMock({
       [orderItemId]: Array.from({ length: nextQuantity }, (_, index) => index + 1),
     };
 
-    if (reachesCompletion) {
-      const durationMs = tableItemCompletionWindowMs.value;
-      if (durationMs === 0) {
-        if (hideWhenComplete) {
-          finishTableItem(orderItemId);
-        }
-        return;
-      }
-
+    if (hideWhenComplete && nextQuantity === orderItem.quantity) {
       itemCompletionStartedAt.value = {
         ...itemCompletionStartedAt.value,
         [orderItemId]: Date.now(),
-      };
-      itemCompletionDurationByItemId.value = {
-        ...itemCompletionDurationByItemId.value,
-        [orderItemId]: durationMs,
-      };
-      itemCompletionHideByItemId.value = {
-        ...itemCompletionHideByItemId.value,
-        [orderItemId]: Boolean(hideWhenComplete),
       };
       itemCompletionPreviousQuantityByItemId.value = {
         ...itemCompletionPreviousQuantityByItemId.value,
@@ -266,13 +250,9 @@ export function useOrderViewMock({
       };
       itemCompletionTimers.set(
         orderItemId,
-        window.setTimeout(() => finishItemCompletion(orderItemId), durationMs),
+        window.setTimeout(() => finishTableItem(orderItemId), itemCompletionWindowMs),
       );
-      showToast(
-        hideWhenComplete
-          ? `${orderItem.name}は${formatSeconds(durationMs)}秒後にテーブル一覧から消えます`
-          : `${formatSeconds(durationMs)}秒以内なら${orderItem.name}の完了を取り消せます`,
-      );
+      showToast(`${orderItem.name}は5秒後にテーブル一覧から消えます`);
     } else if (!keepOpen) {
       showToast(
         nextQuantity < previousQuantity
@@ -309,12 +289,6 @@ export function useOrderViewMock({
     const nextStartedAt = { ...itemCompletionStartedAt.value };
     delete nextStartedAt[orderItemId];
     itemCompletionStartedAt.value = nextStartedAt;
-    const nextDurations = { ...itemCompletionDurationByItemId.value };
-    delete nextDurations[orderItemId];
-    itemCompletionDurationByItemId.value = nextDurations;
-    const nextHideByItemId = { ...itemCompletionHideByItemId.value };
-    delete nextHideByItemId[orderItemId];
-    itemCompletionHideByItemId.value = nextHideByItemId;
     const nextPreviousQuantities = {
       ...itemCompletionPreviousQuantityByItemId.value,
     };
@@ -324,24 +298,11 @@ export function useOrderViewMock({
     if (activeItemActionId.value === orderItemId) {
       closeItemAction();
     }
-    if (selectedAggregateOriginItemId.value === orderItemId) {
-      closeAggregate();
+    if (selectedItemId.value === orderItemId) {
+      closeItemDetail();
     }
     if (orderItem) {
       showToast(`${orderItem.name}をテーブル一覧から非表示にしました`);
-    }
-  }
-
-  function finishItemCompletion(orderItemId) {
-    if (itemCompletionHideByItemId.value[orderItemId]) {
-      finishTableItem(orderItemId);
-      return;
-    }
-
-    const orderItem = findOrderItem(orderItemId);
-    clearItemCompletion(orderItemId);
-    if (orderItem) {
-      showToast(`${orderItem.name}を調理済みにしました`);
     }
   }
 
@@ -353,16 +314,7 @@ export function useOrderViewMock({
       const nextState = { ...completionStartedAt.value };
       delete nextState[orderId];
       completionStartedAt.value = nextState;
-      const nextDurations = { ...completionDurationByOrderId.value };
-      delete nextDurations[orderId];
-      completionDurationByOrderId.value = nextDurations;
       showToast('完了を取り消しました');
-      return;
-    }
-
-    const durationMs = completionWindowMs.value;
-    if (durationMs === 0) {
-      finishOrder(orderId);
       return;
     }
 
@@ -370,15 +322,11 @@ export function useOrderViewMock({
       ...completionStartedAt.value,
       [orderId]: Date.now(),
     };
-    completionDurationByOrderId.value = {
-      ...completionDurationByOrderId.value,
-      [orderId]: durationMs,
-    };
     completionTimers.set(
       orderId,
-      window.setTimeout(() => finishOrder(orderId), durationMs),
+      window.setTimeout(() => finishOrder(orderId), orderCompletionWindowMs),
     );
-    showToast(`${formatSeconds(durationMs)}秒以内なら完了を取り消せます`);
+    showToast('3秒以内なら完了を取り消せます');
   }
 
   function finishOrder(orderId) {
@@ -388,9 +336,6 @@ export function useOrderViewMock({
     const nextState = { ...completionStartedAt.value };
     delete nextState[orderId];
     completionStartedAt.value = nextState;
-    const nextDurations = { ...completionDurationByOrderId.value };
-    delete nextDurations[orderId];
-    completionDurationByOrderId.value = nextDurations;
     if (finishedOrder) {
       const finishedItemIds = new Set(
         finishedOrder.items.map((orderItem) => orderItem.order_item_id),
@@ -401,7 +346,9 @@ export function useOrderViewMock({
           ([orderItemId]) => !finishedItemIds.has(orderItemId),
         ),
       );
-      closeAggregate();
+      if (finishedItemIds.has(selectedItemId.value)) {
+        closeItemDetail();
+      }
     }
     showToast('注文を調理済みにしました');
 
@@ -418,37 +365,6 @@ export function useOrderViewMock({
     }, 1800);
   }
 
-  function completeItemRemaining(orderItemId, { hideWhenComplete = false } = {}) {
-    const orderItem = findOrderItem(orderItemId);
-
-    if (!orderItem) {
-      return;
-    }
-
-    const processedCount =
-      processedUnitNumbersByItemId.value[orderItem.order_item_id]?.length ?? 0;
-
-    setItemProcessedQuantity({
-      orderItemId,
-      processedQuantity: createItemCompletionQuantity({
-        processedCount,
-        totalQuantity: orderItem.quantity,
-      }),
-      hideWhenComplete,
-    });
-  }
-
-  function applyAggregateSelections(updates, { hideWhenComplete = false } = {}) {
-    updates.forEach((update) => {
-      setItemProcessedQuantity({
-        orderItemId: update.orderItemId,
-        processedQuantity: update.processedQuantity,
-        hideWhenComplete,
-      });
-    });
-    closeAggregate();
-  }
-
   onBeforeUnmount(() => {
     window.clearInterval(clockTimer);
     window.clearTimeout(toastTimer);
@@ -462,37 +378,26 @@ export function useOrderViewMock({
     cancelTableItemCompletion,
     categories,
     closeAggregate,
+    closeItemDetail,
     closeItemAction,
-    completeItemRemaining,
     completionStartedAt,
-    completionDurationByOrderId,
-    completionWindowMs,
+    completionWindowMs: orderCompletionWindowMs,
     hiddenCompletedItemIds,
     itemCompletionStartedAt,
-    itemCompletionDurationByItemId,
-    itemCompletionHideByItemId,
-    itemCompletionWindowMs: tableItemCompletionWindowMs,
+    itemCompletionWindowMs,
     nowMs,
-    applyAggregateSelections,
     openAggregate,
-    openAggregateForItem,
+    openItemDetail,
     processedUnitNumbersByItemId,
     selectCategory,
     selectedAggregate,
-    selectedAggregateOriginItemId,
+    selectedItemAnchor,
+    selectedItemDetail,
     selectedCategoryId,
+    setItemProcessedQuantity,
     toast,
     toggleItemAction,
     toggleOrderCompletion,
     visibleOrders,
   };
-}
-
-function normalizeDurationMs(duration, fallback) {
-  const value = Number(toValue(duration));
-  return Number.isFinite(value) && value >= 0 ? value : fallback;
-}
-
-function formatSeconds(durationMs) {
-  return durationMs / 1000;
 }

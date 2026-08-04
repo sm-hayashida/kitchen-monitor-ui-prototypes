@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue';
 import { Clock, Pin } from '@lucide/vue';
-import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   getOrderTimingStatus,
   summarizeOrderTimings,
@@ -37,10 +36,6 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-  itemCompletionDurationByItemId: {
-    type: Object,
-    required: true,
-  },
   itemCompletionWindowMs: {
     type: Number,
     required: true,
@@ -56,30 +51,20 @@ const props = defineProps({
 });
 
 defineEmits([
-  'activate-item',
   'cancel-item-completion',
   'move-table',
   'open-aggregate',
+  'open-item-detail',
+  'set-item-processed-quantity',
+  'toggle-item-action',
   'toggle-pinned',
 ]);
 
-const comparison = useComparisonStore();
-const timingOptions = computed(() => ({
-  targetMinutes: comparison.settings.targetMinutes,
-  warningWindowMinutes: comparison.settings.warningMinutes,
-}));
-const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
-const itemTransitionName = computed(() =>
-  comparison.settings.motion ? 'table-item' : '',
-);
 const isContinuation = computed(() => props.table.segment_index > 1);
-const continuationLabel = computed(() =>
-  `${props.table.table_no} 続き ${props.table.segment_index}/${props.table.segment_count}`,
-);
 const timingStatus = computed(() =>
-  getOrderTimingStatus(props.table.earliest_elapsed_minutes, timingOptions.value),
+  getOrderTimingStatus(props.table.earliest_elapsed_minutes),
 );
-const timingSummary = computed(() => summarizeOrderTimings(props.table.orders, timingOptions.value));
+const timingSummary = computed(() => summarizeOrderTimings(props.table.orders));
 const pendingQuantity = computed(() =>
   props.table.orders.reduce(
     (tableTotal, order) =>
@@ -99,7 +84,7 @@ const hasOpenItemAction = computed(() =>
 );
 
 function orderGroupTiming(orderGroup) {
-  return getOrderTimingStatus(orderGroup.elapsed_minutes, timingOptions.value);
+  return getOrderTimingStatus(orderGroup.elapsed_minutes);
 }
 </script>
 
@@ -174,11 +159,6 @@ function orderGroupTiming(orderGroup) {
       </div>
     </header>
 
-    <header v-else class="order-continuation-head table-continuation-head">
-      <strong>{{ continuationLabel }}</strong>
-      <small>{{ table.orders.length }}注文</small>
-    </header>
-
     <div class="table-order-groups">
       <section v-for="orderGroup in table.order_groups" :key="orderGroup.order_id">
         <header
@@ -188,6 +168,7 @@ function orderGroupTiming(orderGroup) {
         >
           <span>
             注文 {{ orderGroup.order_index }}
+            <i v-if="orderGroup.order_memo" class="table-order-memo-flag">メモ</i>
           </span>
           <b>注文から{{ orderGroup.elapsed_minutes }}分</b>
           <em v-if="orderGroupTiming(orderGroup).state !== 'normal'">
@@ -195,14 +176,7 @@ function orderGroupTiming(orderGroup) {
           </em>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
-        <p
-          v-if="showOrderMemo && orderGroup.order_memo"
-          class="table-order-memo-inline"
-        >
-          <strong>注文メモ</strong>
-          <span>{{ orderGroup.order_memo }}</span>
-        </p>
-        <TransitionGroup tag="div" class="table-order-items" :name="itemTransitionName">
+        <TransitionGroup tag="div" class="table-order-items" name="table-item">
           <OrderItemRow
             v-for="orderItem in orderGroup.items"
             :key="orderItem.order_item_id"
@@ -210,12 +184,14 @@ function orderGroupTiming(orderGroup) {
             :aggregate-by-key="aggregateByKey"
             :interactions-disabled="isReorderMode"
             :item-completion-started-at="itemCompletionStartedAt[orderItem.order_item_id]"
-            :item-completion-window-ms="itemCompletionDurationByItemId[orderItem.order_item_id] ?? itemCompletionWindowMs"
+            :item-completion-window-ms="itemCompletionWindowMs"
             :order-item="orderItem"
             :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
-            @activate-item="$emit('activate-item', $event)"
             @cancel-item-completion="$emit('cancel-item-completion', $event)"
             @open-aggregate="$emit('open-aggregate', $event)"
+            @open-item-detail="$emit('open-item-detail', $event)"
+            @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
+            @toggle-item-action="$emit('toggle-item-action', $event)"
           />
         </TransitionGroup>
       </section>

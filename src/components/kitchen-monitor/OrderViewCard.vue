@@ -1,7 +1,6 @@
 <script setup>
 import { Clock } from '@lucide/vue';
 import { computed } from 'vue';
-import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
 import CountdownProgressLine from './CountdownProgressLine.vue';
 import OrderItemRow from './OrderItemRow.vue';
@@ -23,18 +22,6 @@ const props = defineProps({
     type: Number,
     required: true,
   },
-  itemCompletionStartedAt: {
-    type: Object,
-    required: true,
-  },
-  itemCompletionDurationByItemId: {
-    type: Object,
-    required: true,
-  },
-  itemCompletionWindowMs: {
-    type: Number,
-    required: true,
-  },
   order: {
     type: Object,
     required: true,
@@ -46,30 +33,21 @@ const props = defineProps({
 });
 
 defineEmits([
-  'activate-item',
-  'cancel-item-completion',
   'complete-order',
   'open-aggregate',
+  'open-item-detail',
+  'set-item-processed-quantity',
+  'toggle-item-action',
 ]);
 
-const comparison = useComparisonStore();
 const timingStatus = computed(() =>
-  getOrderTimingStatus(props.order.ordered_elapsed_minutes, {
-    targetMinutes: comparison.settings.targetMinutes,
-    warningWindowMinutes: comparison.settings.warningMinutes,
-  }),
+  getOrderTimingStatus(props.order.ordered_elapsed_minutes),
 );
-const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
-const showBulkComplete = computed(() => comparison.enabledInfo.value.has('bulkComplete'));
 const isUndoable = computed(() => Boolean(props.completionStartedAt));
 const sourceOrderId = computed(() => props.order.source_order_id ?? props.order.id);
 const segmentIndex = computed(() => props.order.segment_index ?? 1);
-const segmentCount = computed(() => props.order.segment_count ?? 1);
 const isContinuation = computed(() => segmentIndex.value > 1);
 const isLastSegment = computed(() => props.order.is_last_segment ?? true);
-const continuationLabel = computed(() =>
-  `${props.order.table_no} 続き ${segmentIndex.value}/${segmentCount.value}`,
-);
 const hasOpenItemAction = computed(() =>
   props.order.items.some(
     (orderItem) => orderItem.order_item_id === props.activeItemActionId,
@@ -117,18 +95,19 @@ const hasOpenItemAction = computed(() =>
       <small>{{ sourceOrderId }}</small>
     </header>
 
-    <header v-else class="order-continuation-head">
-      <strong>{{ continuationLabel }}</strong>
-      <small>{{ sourceOrderId }}</small>
-    </header>
-
-    <div
-      v-if="!isContinuation && showOrderMemo && order.order_memo"
-      class="order-card-memo-preview order-card-memo-inline"
+    <button
+      v-if="!isContinuation && order.order_memo"
+      class="order-card-memo-preview"
+      type="button"
+      @click.stop="$emit('open-item-detail', {
+        orderItemId: order.items[0]?.order_item_id,
+        anchorRect: $event.currentTarget.getBoundingClientRect(),
+      })"
     >
       <span>注文メモ</span>
       <b>{{ order.order_memo }}</b>
-    </div>
+      <em>全文</em>
+    </button>
 
     <div class="order-view-items">
       <OrderItemRow
@@ -136,18 +115,17 @@ const hasOpenItemAction = computed(() =>
         :key="orderItem.order_item_id"
         :active-item-action-id="activeItemActionId"
         :aggregate-by-key="aggregateByKey"
-        :item-completion-started-at="itemCompletionStartedAt[orderItem.order_item_id]"
-        :item-completion-window-ms="itemCompletionDurationByItemId[orderItem.order_item_id] ?? itemCompletionWindowMs"
         :order-item="orderItem"
         :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
-        @activate-item="$emit('activate-item', $event)"
-        @cancel-item-completion="$emit('cancel-item-completion', $event)"
         @open-aggregate="$emit('open-aggregate', $event)"
+        @open-item-detail="$emit('open-item-detail', $event)"
+        @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
+        @toggle-item-action="$emit('toggle-item-action', $event)"
       />
     </div>
 
     <button
-      v-if="isLastSegment && showBulkComplete"
+      v-if="isLastSegment"
       class="order-view-complete-button"
       :class="{ undoable: isUndoable }"
       type="button"

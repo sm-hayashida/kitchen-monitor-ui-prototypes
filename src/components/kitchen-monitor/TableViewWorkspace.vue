@@ -5,9 +5,6 @@ import {
   createCompactFlowColumns,
   createOrderedMasonryPages,
 } from '../../features/kitchen-monitor/orderMasonryLayout';
-import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
-import { decideItemBodyAction } from '../../features/kitchen-monitor/itemActionRules';
-import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
   createTableCardSegments,
   createTableGroups,
@@ -16,14 +13,15 @@ import {
   sortTableGroups,
 } from '../../features/kitchen-monitor/tableViewModel';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
+import { useColumnLayoutPreference } from '../../features/kitchen-monitor/useColumnLayoutPreference';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
 import { useTableLayoutPreferences } from '../../features/kitchen-monitor/useTableLayoutPreferences';
-import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
+import OrderItemDetailPopover from './OrderItemDetailPopover.vue';
 import ProductAggregateModal from './ProductAggregateModal.vue';
 import TableViewCard from './TableViewCard.vue';
 
@@ -47,67 +45,36 @@ const isSettingsOpen = ref(false);
 const layoutBodyRef = ref(null);
 const horizontalScrollerRef = ref(null);
 const activeTableCategoryId = ref('');
-const horizontalNavigation = ref({
-  canNext: false,
-  canPrevious: false,
-  firstVisibleColumn: 0,
-  lastVisibleColumn: 0,
-  scrollProgress: 1,
-  totalColumnCount: 0,
-});
-const comparison = useComparisonStore();
-const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
-const timingOptions = computed(() => ({
-  targetMinutes: comparison.settings.targetMinutes,
-  warningWindowMinutes: comparison.settings.warningMinutes,
-}));
-const comparisonPageClass = computed(() => [
-  'table-view-layout',
-  `comparison-rows-${comparison.settings.rowSpacing}`,
-  comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
-].join(' '));
-const cardTransitionName = computed(() =>
-  comparison.settings.motion ? 'masonry-card' : '',
-);
-const itemTransitionName = computed(() =>
-  comparison.settings.motion ? 'table-item' : '',
-);
-const cardEstimateOptions = computed(() => ({
-  cardMinWidth: comparison.settings.cardMinWidth,
-  rowSpacing: comparison.settings.rowSpacing,
-  visibleInfo: comparison.settings.info,
-}));
 const isPaged = computed(() => props.layout === 'n-paged');
+const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
-  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
+  preferredColumnCount: columnCountPreference,
+  reservedHeight: props.layout === 'n-scroll' ? 44 : 0,
 });
 
 const {
   activeItemActionId,
   aggregateByKey,
-  applyAggregateSelections,
   cancelTableItemCompletion,
   closeAggregate,
+  closeItemDetail,
   closeItemAction,
-  completeItemRemaining,
   hiddenCompletedItemIds,
-  itemCompletionDurationByItemId,
   itemCompletionStartedAt,
   itemCompletionWindowMs,
   nowMs,
   openAggregate,
-  openAggregateForItem,
+  openItemDetail,
   processedUnitNumbersByItemId,
+  setItemProcessedQuantity,
   selectedAggregate,
-  selectedAggregateOriginItemId,
+  selectedItemAnchor,
+  selectedItemDetail,
   toast,
+  toggleItemAction,
   visibleOrders,
-} = useOrderViewMock({
-  initialOrders: scenarioOrders,
-  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
-  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
-});
+} = useOrderViewMock();
 
 const {
   departments,
@@ -165,13 +132,12 @@ const sortedTableGroups = computed(() =>
 const tableSegments = computed(() =>
   createTableCardSegments(globallySortedTableGroups.value, {
     maxCardHeight: columnHeight.value,
-    estimateOptions: cardEstimateOptions.value,
   }),
 );
 const pagedTableColumns = computed(() =>
   createOrderedMasonryPages(tableSegments.value, {
     columnCount: columnCount.value,
-    estimateCardHeight: (table) => estimateTableCardHeight(table, cardEstimateOptions.value),
+    estimateCardHeight: estimateTableCardHeight,
     maxColumnHeight: columnHeight.value,
   }),
 );
@@ -202,18 +168,17 @@ const groupedScrollLayout = computed(() => {
   sortedTableCategoryGroups.value.forEach((group, groupIndex) => {
     const segments = createTableCardSegments(group.tables, {
       maxCardHeight: groupedColumnHeight,
-      estimateOptions: cardEstimateOptions.value,
     });
     const groupColumns = createCompactFlowColumns(segments, {
-      estimateCardHeight: (table) => estimateTableCardHeight(table, cardEstimateOptions.value),
+      estimateCardHeight: estimateTableCardHeight,
       maxColumnHeight: groupedColumnHeight,
     });
     const startColumnIndex = columns.length;
     const overdueTableCount = group.tables.filter(
-      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes, timingOptions.value).isOverdue,
+      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes).isOverdue,
     ).length;
     const warningTableCount = group.tables.filter(
-      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes, timingOptions.value).isWarning,
+      (table) => getOrderTimingStatus(table.earliest_elapsed_minutes).isWarning,
     ).length;
 
     groups.push({
@@ -266,14 +231,6 @@ function setPage(nextPage) {
   currentPage.value = Math.min(pageCount.value, Math.max(1, nextPage));
 }
 
-function updateHorizontalNavigation(state) {
-  horizontalNavigation.value = state;
-}
-
-function scrollTableByColumn(direction) {
-  horizontalScrollerRef.value?.scrollByColumn(direction);
-}
-
 function toggleReorderMode() {
   if (!isReorderMode.value) {
     setManualOrder(orderedTableIds.value);
@@ -291,21 +248,8 @@ function moveTableInOrder(tableId, direction) {
   currentPage.value = 1;
 }
 
-function activateTableItem(payload) {
-  const action = decideItemBodyAction({
-    itemTapMode: comparison.settings.itemTapMode,
-    remainingCount: payload.remainingCount,
-  });
-
-  if (action === 'complete-remaining') {
-    completeItemRemaining(payload.orderItemId, { hideWhenComplete: true });
-  } else if (action === 'open-modal') {
-    openAggregateForItem(payload.orderItemId);
-  }
-}
-
-function applyTableAggregateSelections(updates) {
-  applyAggregateSelections(updates, { hideWhenComplete: true });
+function setTableItemProcessedQuantity(payload) {
+  setItemProcessedQuantity({ ...payload, hideWhenComplete: true });
 }
 
 function canMoveTable(tableId, direction) {
@@ -332,6 +276,9 @@ function toggleTablePinned(tableId) {
 
 function saveDepartmentSettings(departmentIds, preferences = {}) {
   saveDepartments(departmentIds);
+  if (preferences.columnCountPreference !== undefined) {
+    setColumnCountPreference(preferences.columnCountPreference);
+  }
   if (typeof preferences.tableGroupingEnabled === 'boolean') {
     tableGroupingEnabled.value = preferences.tableGroupingEnabled;
   }
@@ -368,35 +315,13 @@ function syncActiveTableCategory(columnIndex) {
     :categories="[]"
     external-settings
     :now-ms="nowMs"
-    :page-class="comparisonPageClass"
+    page-class="table-view-layout"
     :show-navigation="false"
     :toast="toast"
     @open-settings="isSettingsOpen = true"
     @switch-view="$emit('switch-view', $event)"
   >
     <template #header-actions>
-      <HeaderLayoutNavigation
-        v-if="!isPaged"
-        mode="horizontal"
-        :can-next="horizontalNavigation.canNext"
-        :can-previous="horizontalNavigation.canPrevious"
-        :first-visible-column="horizontalNavigation.firstVisibleColumn"
-        :last-visible-column="horizontalNavigation.lastVisibleColumn"
-        :scroll-progress="horizontalNavigation.scrollProgress"
-        :total-column-count="horizontalNavigation.totalColumnCount"
-        @previous-column="scrollTableByColumn(-1)"
-        @next-column="scrollTableByColumn(1)"
-      />
-      <HeaderLayoutNavigation
-        v-if="isPaged"
-        mode="paged"
-        :current-page="currentPage"
-        :page-count="pageCount"
-        @first-page="setPage(1)"
-        @previous-page="setPage(currentPage - 1)"
-        @next-page="setPage(currentPage + 1)"
-        @last-page="setPage(pageCount)"
-      />
       <label v-if="isGroupedScroll" class="top-bar-group-control" title="テーブルカテゴリ">
         <LayoutGrid :size="17" :stroke-width="2.2" aria-hidden="true" />
         <span class="visually-hidden">テーブルカテゴリ</span>
@@ -453,7 +378,6 @@ function syncActiveTableCategory(columnIndex) {
           :column-count="columnCount"
           :column-meta="scrollTableColumnMeta"
           :columns="scrollTableColumns"
-          @navigation-state-change="updateHorizontalNavigation"
           @visible-column-change="syncActiveTableCategory"
         >
           <template #column-header="{ meta }">
@@ -476,7 +400,7 @@ function syncActiveTableCategory(columnIndex) {
             <TransitionGroup
               tag="div"
               class="horizontal-column-stack"
-              :name="cardTransitionName"
+              name="masonry-card"
             >
               <TableViewCard
                 v-for="table in column"
@@ -488,14 +412,15 @@ function syncActiveTableCategory(columnIndex) {
                 :is-pinned="pinnedTableIds.has(table.source_table_id)"
                 :is-reorder-mode="isReorderMode"
                 :item-completion-started-at="itemCompletionStartedAt"
-                :item-completion-duration-by-item-id="itemCompletionDurationByItemId"
                 :item-completion-window-ms="itemCompletionWindowMs"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 :table="table"
-                @activate-item="activateTableItem"
                 @cancel-item-completion="cancelTableItemCompletion"
                 @move-table="moveTableInOrder(table.source_table_id, $event)"
                 @open-aggregate="openAggregate"
+                @open-item-detail="openItemDetail"
+                @set-item-processed-quantity="setTableItemProcessedQuantity"
+                @toggle-item-action="toggleItemAction"
                 @toggle-pinned="toggleTablePinned"
               />
             </TransitionGroup>
@@ -522,14 +447,15 @@ function syncActiveTableCategory(columnIndex) {
               :is-pinned="pinnedTableIds.has(table.source_table_id)"
               :is-reorder-mode="isReorderMode"
               :item-completion-started-at="itemCompletionStartedAt"
-              :item-completion-duration-by-item-id="itemCompletionDurationByItemId"
               :item-completion-window-ms="itemCompletionWindowMs"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               :table="table"
-              @activate-item="activateTableItem"
               @cancel-item-completion="cancelTableItemCompletion"
               @move-table="moveTableInOrder(table.source_table_id, $event)"
               @open-aggregate="openAggregate"
+              @open-item-detail="openItemDetail"
+              @set-item-processed-quantity="setTableItemProcessedQuantity"
+              @toggle-item-action="toggleItemAction"
               @toggle-pinned="toggleTablePinned"
             />
           </div>
@@ -539,20 +465,68 @@ function syncActiveTableCategory(columnIndex) {
           設定された部門の未調理テーブルはありません
         </p>
       </div>
+
+      <footer v-if="isPaged" class="order-view-pagination table-view-pagination">
+        <button
+          type="button"
+          aria-label="最初のページ"
+          title="最初のページ"
+          :disabled="currentPage === 1"
+          @click="setPage(1)"
+        >
+          «
+        </button>
+        <button
+          type="button"
+          aria-label="前のページ"
+          title="前のページ"
+          :disabled="currentPage === 1"
+          @click="setPage(currentPage - 1)"
+        >
+          ‹
+        </button>
+        <strong>{{ currentPage }} / {{ pageCount }}</strong>
+        <button
+          type="button"
+          aria-label="次のページ"
+          title="次のページ"
+          :disabled="currentPage === pageCount"
+          @click="setPage(currentPage + 1)"
+        >
+          ›
+        </button>
+        <button
+          type="button"
+          aria-label="最後のページ"
+          title="最後のページ"
+          :disabled="currentPage === pageCount"
+          @click="setPage(pageCount)"
+        >
+          »
+        </button>
+      </footer>
     </div>
 
     <ProductAggregateModal
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
-      :origin-order-item-id="selectedAggregateOriginItemId"
-      @apply-selections="applyTableAggregateSelections"
       @close="closeAggregate"
+    />
+
+    <OrderItemDetailPopover
+      v-if="selectedItemDetail && selectedItemAnchor"
+      :anchor-rect="selectedItemAnchor"
+      :detail="selectedItemDetail"
+      hide-when-complete
+      @close="closeItemDetail"
+      @set-item-processed-quantity="setTableItemProcessedQuantity"
     />
 
     <template #overlay>
       <OrderDepartmentSettingsModal
         v-if="isSettingsOpen"
         :active-view="activeView"
+        :column-count-preference="columnCountPreference"
         :departments="departments"
         :selected-department-ids="selectedDepartmentIds"
         show-table-grouping-option

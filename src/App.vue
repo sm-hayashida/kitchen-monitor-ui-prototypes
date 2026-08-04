@@ -1,10 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import ComparisonPanel from './components/kitchen-monitor/ComparisonPanel.vue';
-import {
-  createComparisonStore,
-  provideComparisonStore,
-} from './features/kitchen-monitor/comparisonState';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import KitchenMonitorOrderPage from './pages/KitchenMonitorOrderPage.vue';
 import KitchenMonitorOrderNPagedPage from './pages/KitchenMonitorOrderNPagedPage.vue';
 import KitchenMonitorOrderNScrollPage from './pages/KitchenMonitorOrderNScrollPage.vue';
@@ -23,58 +18,24 @@ const pages = {
 
 const activeView = ref(resolveView());
 const activePage = computed(() => pages[activeView.value] ?? pages[defaultView]);
-const comparison = createComparisonStore(window.location.hash);
-provideComparisonStore(comparison);
-const activePageKey = computed(() => `${activeView.value}:${comparison.settings.scenario}`);
-const comparisonTokenClasses = computed(() => [
-  'comparison-token-root',
-  `comparison-theme-${comparison.settings.theme}`,
-  `comparison-urgency-${comparison.settings.urgency}`,
-  `comparison-intensity-${comparison.settings.intensity}`,
-]);
-let isSyncingHash = false;
 
 function resolveView() {
-  const view = window.location.hash.replace(/^#/, '').split('?')[0];
+  const view = window.location.hash.replace(/^#/, '');
   return Object.hasOwn(pages, view) ? view : defaultView;
 }
 
 function syncView() {
-  isSyncingHash = true;
-  activeView.value = comparison.updateFromHash(window.location.hash);
-  isSyncingHash = false;
+  activeView.value = resolveView();
 }
 
 function switchView(nextView) {
-  const route = Object.hasOwn(pages, nextView) ? nextView : defaultView;
-  window.location.hash = comparison.serialize(route);
+  window.location.hash = Object.hasOwn(pages, nextView) ? nextView : defaultView;
 }
 
 onMounted(() => window.addEventListener('hashchange', syncView));
 onUnmounted(() => window.removeEventListener('hashchange', syncView));
-
-watch(
-  () => comparison.resetKey.value,
-  () => {
-    if (isSyncingHash) {
-      return;
-    }
-    const nextHash = comparison.serialize(activeView.value);
-    if (window.location.hash !== nextHash) {
-      window.history.replaceState(null, '', nextHash);
-    }
-  },
-);
 </script>
 
 <template>
-  <div :class="comparisonTokenClasses">
-    <component
-      :is="activePage"
-      :key="activePageKey"
-      :active-view="activeView"
-      @switch-view="switchView"
-    />
-    <ComparisonPanel :active-view="activeView" @switch-view="switchView" />
-  </div>
+  <component :is="activePage" :active-view="activeView" @switch-view="switchView" />
 </template>

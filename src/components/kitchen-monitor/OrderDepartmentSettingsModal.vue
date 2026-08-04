@@ -1,11 +1,16 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { columnCountPreferenceOptions } from '../../features/kitchen-monitor/useColumnLayoutPreference';
 import ViewModeSettingsPanel from './ViewModeSettingsPanel.vue';
 
 const props = defineProps({
   activeView: {
     type: String,
     required: true,
+  },
+  columnCountPreference: {
+    type: String,
+    default: 'auto',
   },
   departments: {
     type: Array,
@@ -28,6 +33,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save', 'switch-view']);
 const query = ref('');
 const draftIds = ref([...props.selectedDepartmentIds]);
+const draftColumnCountPreference = ref(props.columnCountPreference);
 const draftTableGroupingEnabled = ref(props.tableGroupingEnabled);
 
 const filteredDepartments = computed(() => {
@@ -52,6 +58,7 @@ function clearAll() {
 
 function save() {
   emit('save', draftIds.value, {
+    columnCountPreference: draftColumnCountPreference.value,
     tableGroupingEnabled: draftTableGroupingEnabled.value,
   });
 }
@@ -78,6 +85,25 @@ function save() {
           :active-view="activeView"
           @switch-view="$emit('switch-view', $event)"
         />
+
+        <section class="column-count-setting">
+          <div>
+            <strong>カード列数</strong>
+            <span>自動は画面幅に合わせて1〜3列で調整します</span>
+          </div>
+          <div class="column-count-choice" role="group" aria-label="カード列数">
+            <button
+              v-for="option in columnCountPreferenceOptions"
+              :key="option.value"
+              type="button"
+              :class="{ active: draftColumnCountPreference === option.value }"
+              :aria-pressed="draftColumnCountPreference === option.value"
+              @click="draftColumnCountPreference = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </section>
 
         <section v-if="showTableGroupingOption" class="table-grouping-setting">
           <div>

@@ -31,7 +31,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['visible-column-change', 'navigation-state-change']);
+const emit = defineEmits(['visible-column-change']);
 
 const scrollElement = ref(null);
 const currentColumnIndex = ref(0);
@@ -55,17 +55,6 @@ const lastVisibleColumn = computed(() =>
   Math.min(totalColumnCount.value, firstVisibleColumn.value + visibleColumnCount.value - 1),
 );
 
-function emitNavigationState() {
-  emit('navigation-state-change', {
-    canNext: canScrollNext.value,
-    canPrevious: canScrollPrevious.value,
-    firstVisibleColumn: firstVisibleColumn.value,
-    lastVisibleColumn: lastVisibleColumn.value,
-    scrollProgress: scrollProgress.value,
-    totalColumnCount: totalColumnCount.value,
-  });
-}
-
 function columnElements() {
   return Array.from(
     scrollElement.value?.querySelectorAll('.horizontal-scroll-column') ?? [],
@@ -78,7 +67,6 @@ function resetScrollState() {
   canScrollPrevious.value = false;
   canScrollNext.value = false;
   scrollProgress.value = 1;
-  emitNavigationState();
 }
 
 // Scrolling only reads cached geometry; layout measurements happen on resize/data changes.
@@ -107,7 +95,6 @@ function updateScrollState() {
     element.scrollWidth > 0
       ? Math.min(1, (element.scrollLeft + element.clientWidth) / element.scrollWidth)
       : 1;
-  emitNavigationState();
 }
 
 function measureScrollLayout() {
@@ -164,14 +151,13 @@ function scrollToColumn(columnIndex, behavior = 'smooth') {
   const targetIndex = Math.min(totalColumnCount.value - 1, Math.max(0, columnIndex));
   currentColumnIndex.value = targetIndex;
   element.scrollTo({ left: targetIndex * columnStep, behavior });
-  scheduleScrollStateUpdate();
 }
 
 function scrollByColumn(direction) {
   scrollToColumn(currentColumnIndex.value + direction);
 }
 
-defineExpose({ scrollToColumn, scrollByColumn });
+defineExpose({ scrollToColumn });
 
 watch(
   () => props.columns,
@@ -190,6 +176,14 @@ watch(
       });
     }
 
+    measureScrollLayout();
+  },
+);
+
+watch(
+  () => props.columnCount,
+  async () => {
+    await nextTick();
     measureScrollLayout();
   },
 );
@@ -256,5 +250,32 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       ></i>
     </div>
+
+    <footer class="horizontal-scroll-navigation">
+      <div class="horizontal-scroll-progress" aria-hidden="true">
+        <i :style="{ transform: `scaleX(${scrollProgress})` }"></i>
+      </div>
+      <output class="horizontal-scroll-position" aria-live="polite">
+        {{ firstVisibleColumn }}–{{ lastVisibleColumn }} / {{ totalColumnCount }}列
+      </output>
+      <button
+        type="button"
+        :disabled="!canScrollPrevious"
+        aria-label="1列前へ"
+        title="1列前へ"
+        @click="scrollByColumn(-1)"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        :disabled="!canScrollNext"
+        aria-label="1列次へ"
+        title="1列次へ"
+        @click="scrollByColumn(1)"
+      >
+        ›
+      </button>
+    </footer>
   </div>
 </template>
