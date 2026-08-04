@@ -121,11 +121,18 @@ function openQuantityAction() {
   }
 
   if (usesAggregateQuantityModal.value && aggregate.value) {
-    emit('open-aggregate', aggregateKey.value);
+    emitAggregateRequest();
     return;
   }
 
   emit('toggle-item-action', props.orderItem.order_item_id);
+}
+
+function emitAggregateRequest() {
+  emit('open-aggregate', {
+    aggregateKey: aggregateKey.value,
+    orderItemId: props.orderItem.order_item_id,
+  });
 }
 
 function completeRow() {
@@ -240,7 +247,7 @@ const emit = defineEmits([
         type="button"
         :disabled="interactionsDisabled"
         :aria-label="`${displayName}の同一商品内訳を開く`"
-        @click.stop="$emit('open-aggregate', aggregateKey)"
+        @click.stop="emitAggregateRequest"
       >
         {{ quantityDisplay.aggregateLabel }}
       </button>
@@ -304,7 +311,7 @@ const emit = defineEmits([
         v-if="aggregate && showAggregate"
         class="quantity-aggregate-link"
         type="button"
-        @click="$emit('open-aggregate', aggregateKey)"
+        @click="emitAggregateRequest"
       >
         同一商品の内訳を見る
         <strong>{{ aggregate.totalQuantity }}個 / {{ aggregate.orderCount }}注文</strong>

@@ -20,6 +20,8 @@ export function useOrderViewMock({
   const selectedCategoryId = ref('all');
   const selectedAggregateKey = ref(null);
   const selectedAggregateIncludesCompleted = ref(false);
+  const selectedAggregateSourceOrderId = ref(null);
+  const selectedAggregateSourceOrderItemId = ref(null);
   const activeItemActionId = ref(null);
   const completionStartedAt = ref({});
   const itemCompletionStartedAt = ref({});
@@ -133,15 +135,23 @@ export function useOrderViewMock({
     selectedCategoryId.value = categoryId;
   }
 
-  function openAggregate(aggregateKey, { includeCompleted = false } = {}) {
+  function openAggregate(aggregateKey, {
+    includeCompleted = false,
+    sourceOrderId = null,
+    sourceOrderItemId = null,
+  } = {}) {
     closeItemAction();
     selectedAggregateIncludesCompleted.value = includeCompleted;
+    selectedAggregateSourceOrderId.value = sourceOrderId;
+    selectedAggregateSourceOrderItemId.value = sourceOrderItemId;
     selectedAggregateKey.value = aggregateKey;
   }
 
   function closeAggregate() {
     selectedAggregateKey.value = null;
     selectedAggregateIncludesCompleted.value = false;
+    selectedAggregateSourceOrderId.value = null;
+    selectedAggregateSourceOrderItemId.value = null;
   }
 
   function toggleItemAction(orderItemId) {
@@ -403,6 +413,8 @@ export function useOrderViewMock({
     processedUnitNumbersByItemId,
     selectCategory,
     selectedAggregate,
+    selectedAggregateSourceOrderId,
+    selectedAggregateSourceOrderItemId,
     selectedCategoryId,
     setItemProcessedQuantity,
     toast,

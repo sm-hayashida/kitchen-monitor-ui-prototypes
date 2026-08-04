@@ -201,7 +201,7 @@ function orderGroupTiming(orderGroup) {
             :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
             @cancel-item-completion="$emit('cancel-item-completion', $event)"
             @complete-item="$emit('complete-item', $event)"
-            @open-aggregate="$emit('open-aggregate', $event)"
+            @open-aggregate="$emit('open-aggregate', { ...$event, orderId: orderGroup.order_id })"
             @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
             @toggle-item-action="$emit('toggle-item-action', $event)"
           />

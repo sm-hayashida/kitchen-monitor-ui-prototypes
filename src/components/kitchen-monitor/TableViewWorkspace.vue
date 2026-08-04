@@ -101,6 +101,8 @@ const {
   processedUnitNumbersByItemId,
   setItemProcessedQuantity,
   selectedAggregate,
+  selectedAggregateSourceOrderId,
+  selectedAggregateSourceOrderItemId,
   toast,
   toggleItemAction,
   visibleOrders,
@@ -275,8 +277,12 @@ function scrollTableByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
-function openAggregateForQuantityMode(aggregateKey) {
-  openAggregate(aggregateKey, { includeCompleted: quantitySelectionInAggregate.value });
+function openAggregateForQuantityMode(request) {
+  openAggregate(request.aggregateKey, {
+    includeCompleted: quantitySelectionInAggregate.value,
+    sourceOrderId: request.orderId,
+    sourceOrderItemId: request.orderItemId,
+  });
 }
 
 function toggleReorderMode() {
@@ -576,6 +582,8 @@ function syncActiveTableCategory(columnIndex) {
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
       :quantity-selection-enabled="quantitySelectionInAggregate"
+      :source-order-id="selectedAggregateSourceOrderId"
+      :source-order-item-id="selectedAggregateSourceOrderItemId"
       @close="closeAggregate"
       @set-item-processed-quantity="setTableItemProcessedQuantity"
     />

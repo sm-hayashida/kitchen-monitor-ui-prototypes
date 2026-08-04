@@ -1,5 +1,5 @@
 <script setup>
-import { Clock } from '@lucide/vue';
+import { Clock, Pin } from '@lucide/vue';
 import { computed } from 'vue';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
@@ -31,6 +31,10 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+  isPinned: {
+    type: Boolean,
+    default: false,
+  },
   order: {
     type: Object,
     required: true,
@@ -48,6 +52,7 @@ defineEmits([
   'open-aggregate',
   'set-item-processed-quantity',
   'toggle-item-action',
+  'toggle-pinned',
 ]);
 
 const comparison = useComparisonStore();
@@ -86,6 +91,7 @@ const hasOpenItemAction = computed(() =>
         'item-menu-open': hasOpenItemAction,
         continuation: isContinuation,
         'has-continuation': !isLastSegment,
+        pinned: isPinned,
       },
     ]"
   >
@@ -107,6 +113,17 @@ const hasOpenItemAction = computed(() =>
           <Clock :size="12" :stroke-width="2.4" aria-hidden="true" />
           {{ timingStatus.label }}
         </span>
+        <button
+          class="order-pin-button"
+          :class="{ active: isPinned }"
+          type="button"
+          :aria-pressed="isPinned"
+          :aria-label="isPinned ? `${sourceOrderId}のピン留めを解除` : `${sourceOrderId}を先頭にピン留め`"
+          :title="isPinned ? 'ピン留めを解除' : '先頭にピン留め'"
+          @click.stop="$emit('toggle-pinned', sourceOrderId)"
+        >
+          <Pin :size="15" :stroke-width="2.2" aria-hidden="true" />
+        </button>
       </div>
       <small>{{ sourceOrderId }}</small>
     </header>
@@ -131,7 +148,7 @@ const hasOpenItemAction = computed(() =>
         :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
         @cancel-item-completion="$emit('cancel-item-completion', $event)"
         @complete-item="$emit('complete-item', $event)"
-        @open-aggregate="$emit('open-aggregate', $event)"
+        @open-aggregate="$emit('open-aggregate', { ...$event, orderId: sourceOrderId })"
         @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
         @toggle-item-action="$emit('toggle-item-action', $event)"
       />

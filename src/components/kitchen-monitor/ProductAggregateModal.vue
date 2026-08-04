@@ -11,6 +11,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  sourceOrderId: {
+    type: String,
+    default: null,
+  },
+  sourceOrderItemId: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close', 'set-item-processed-quantity']);
@@ -25,10 +33,22 @@ const pageMatches = computed(() => {
 });
 
 watch(
-  () => props.aggregate.aggregateKey,
+  [
+    () => props.aggregate.aggregateKey,
+    () => props.sourceOrderId,
+    () => props.sourceOrderItemId,
+  ],
   () => {
-    currentPage.value = 1;
+    const sourceMatchIndex = props.aggregate.matches.findIndex((match) =>
+      props.sourceOrderItemId
+        ? match.orderItem.order_item_id === props.sourceOrderItemId
+        : match.order.order_id === props.sourceOrderId,
+    );
+    currentPage.value = sourceMatchIndex < 0
+      ? 1
+      : Math.floor(sourceMatchIndex / itemsPerPage) + 1;
   },
+  { immediate: true },
 );
 
 watch(pageCount, (nextPageCount) => {
@@ -41,6 +61,10 @@ function setPage(nextPage) {
 
 function timingFor(match) {
   return getOrderTimingStatus(match.order.ordered_elapsed_minutes);
+}
+
+function isSourceOrder(match) {
+  return Boolean(props.sourceOrderId) && match.order.order_id === props.sourceOrderId;
 }
 
 function quantityOptionsFor(match) {
@@ -129,10 +153,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             v-for="match in pageMatches"
             :key="match.orderItem.order_item_id"
             class="aggregate-order-tile"
-            :class="{ 'quantity-selection-enabled': quantitySelectionEnabled, 'fully-processed': match.orderItem.pending_quantity === 0 }"
+            :class="{
+              'quantity-selection-enabled': quantitySelectionEnabled,
+              'fully-processed': match.orderItem.pending_quantity === 0,
+              'source-order': isSourceOrder(match),
+            }"
+            :aria-label="isSourceOrder(match) ? `表示元の注文 ${match.order.order_id}` : undefined"
           >
             <header>
-              <strong>{{ match.order.table_no }}</strong>
+              <strong>
+                {{ match.order.table_no }}
+                <i v-if="isSourceOrder(match)" class="aggregate-source-badge">表示元</i>
+              </strong>
               <span :class="timingFor(match).className">
                 {{ match.order.ordered_elapsed_minutes }}分
                 <em v-if="timingFor(match).state !== 'normal'">{{ timingFor(match).label }}</em>

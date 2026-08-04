@@ -1,6 +1,6 @@
 <script setup>
 import { ListFilter } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { createOrderCardSegments } from '../../features/kitchen-monitor/orderCardSegments';
 import {
   createOrderedMasonryPages,
@@ -10,6 +10,10 @@ import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonS
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { useColumnLayoutPreference } from '../../features/kitchen-monitor/useColumnLayoutPreference';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
+import {
+  sortOrdersByPinned,
+  useOrderLayoutPreferences,
+} from '../../features/kitchen-monitor/useOrderLayoutPreferences';
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
 import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
@@ -89,6 +93,8 @@ const {
   processedUnitNumbersByItemId,
   setItemProcessedQuantity,
   selectedAggregate,
+  selectedAggregateSourceOrderId,
+  selectedAggregateSourceOrderItemId,
   toast,
   toggleItemAction,
   toggleOrderCompletion,
@@ -98,6 +104,7 @@ const {
   orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
   itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
 });
+const { pinnedOrderIds, togglePinned: toggleOrderPinnedPreference } = useOrderLayoutPreferences();
 
 const {
   departments,
@@ -116,9 +123,12 @@ const departmentFilteredOrders = computed(() =>
     }))
     .filter((order) => order.items.length > 0),
 );
+const sortedDepartmentFilteredOrders = computed(() =>
+  sortOrdersByPinned(departmentFilteredOrders.value, pinnedOrderIds.value),
+);
 
 const layoutOrders = computed(() =>
-  createOrderCardSegments(departmentFilteredOrders.value, props.layout, {
+  createOrderCardSegments(sortedDepartmentFilteredOrders.value, props.layout, {
     maxCardHeight: columnHeight.value,
     estimateOptions: cardEstimateOptions.value,
   }),
@@ -169,8 +179,22 @@ function scrollOrderByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
-function openAggregateForQuantityMode(aggregateKey) {
-  openAggregate(aggregateKey, { includeCompleted: quantitySelectionInAggregate.value });
+function openAggregateForQuantityMode(request) {
+  openAggregate(request.aggregateKey, {
+    includeCompleted: quantitySelectionInAggregate.value,
+    sourceOrderId: request.orderId,
+    sourceOrderItemId: request.orderItemId,
+  });
+}
+
+function toggleOrderPinned(orderId) {
+  const isPinned = toggleOrderPinnedPreference(orderId);
+  if (!isPinned) {
+    return;
+  }
+
+  currentPage.value = 1;
+  nextTick(() => horizontalScrollerRef.value?.scrollToColumn(0));
 }
 
 function saveDepartmentSettings(departmentIds, preferences = {}) {
@@ -251,6 +275,7 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
                 :completion-window-ms="completionWindowMs"
                 :item-completion-started-at="itemCompletionStartedAt"
                 :item-completion-window-ms="itemCompletionWindowMs"
+                :is-pinned="pinnedOrderIds.has(order.source_order_id ?? order.id)"
                 :order="order"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 @cancel-item-completion="cancelItemCompletion"
@@ -259,6 +284,7 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
                 @open-aggregate="openAggregateForQuantityMode"
                 @set-item-processed-quantity="setItemProcessedQuantity"
                 @toggle-item-action="toggleItemAction"
+                @toggle-pinned="toggleOrderPinned"
               />
             </TransitionGroup>
           </template>
@@ -284,6 +310,7 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
               :completion-window-ms="completionWindowMs"
               :item-completion-started-at="itemCompletionStartedAt"
               :item-completion-window-ms="itemCompletionWindowMs"
+              :is-pinned="pinnedOrderIds.has(order.source_order_id ?? order.id)"
               :order="order"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               @cancel-item-completion="cancelItemCompletion"
@@ -292,6 +319,7 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
               @open-aggregate="openAggregateForQuantityMode"
               @set-item-processed-quantity="setItemProcessedQuantity"
               @toggle-item-action="toggleItemAction"
+              @toggle-pinned="toggleOrderPinned"
             />
           </div>
         </div>
@@ -346,6 +374,8 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
       :quantity-selection-enabled="quantitySelectionInAggregate"
+      :source-order-id="selectedAggregateSourceOrderId"
+      :source-order-item-id="selectedAggregateSourceOrderItemId"
       @close="closeAggregate"
       @set-item-processed-quantity="setItemProcessedQuantity"
     />
