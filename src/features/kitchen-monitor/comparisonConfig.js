@@ -257,6 +257,11 @@ export const comparisonRecipes = Object.freeze({
 
 export const comparisonThemeOptions = Object.freeze([
   Object.freeze({ id: 'orange', label: '現行オレンジ', intent: 'Current baseline' }),
+  Object.freeze({
+    id: 'completed',
+    label: '調理済み画面（橙＋スレート）',
+    intent: 'Completed-screen palette on order and table cards',
+  }),
   Object.freeze({ id: 'blue', label: 'ブルー', intent: 'Calm cool accent' }),
   Object.freeze({ id: 'teal', label: 'ティール', intent: 'Fresh operational accent' }),
   Object.freeze({ id: 'violet', label: 'バイオレット', intent: 'Distinct review variant' }),
@@ -562,6 +567,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
     'table-n-scroll',
     'table-n-page',
     'list',
+    'completed',
   ];
   const rawHash = String(hash ?? '').replace(/^#/, '');
   const [rawRoute = '', rawQuery = ''] = rawHash.split('?');

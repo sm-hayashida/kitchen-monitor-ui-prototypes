@@ -260,6 +260,20 @@ async function copyShareUrl() {
           <div><span>03</span><h3>配色</h3></div>
           <p>アクセントと警告の見分けやすさを比較します</p>
         </header>
+        <button
+          class="comparison-palette-proposal"
+          :class="{ active: comparison.settings.theme === 'completed' }"
+          type="button"
+          @click="comparison.setField('theme', 'completed')"
+        >
+          <span class="comparison-palette-swatches" aria-hidden="true">
+            <i></i><i></i><i></i><i></i>
+          </span>
+          <span>
+            <strong>調理済み画面パレット</strong>
+            <small>橙・白・スレートを注文／テーブルへ適用</small>
+          </span>
+        </button>
         <label>
           <span>テーマ</span>
           <select :value="comparison.settings.theme" @change="updateText('theme', $event)">
