@@ -3,6 +3,7 @@ import { Clock, Pin } from '@lucide/vue';
 import { computed } from 'vue';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
+import { createTableNumberStyle } from '../../features/kitchen-monitor/tableNumberPresentation';
 import CountdownProgressLine from './CountdownProgressLine.vue';
 import OrderItemRow from './OrderItemRow.vue';
 
@@ -97,8 +98,18 @@ const hasOpenItemAction = computed(() =>
   >
     <header v-if="!isContinuation" class="order-view-card-head">
       <div class="order-view-primary-meta">
-        <strong>{{ order.table_no }}</strong>
-        <span class="timing-elapsed">注文から{{ order.ordered_elapsed_minutes }}分</span>
+        <strong
+          class="table-number-label"
+          :style="createTableNumberStyle(order.table_no, 16)"
+        >{{ order.table_no }}</strong>
+        <span
+          class="timing-elapsed"
+          :aria-label="`注文から${order.ordered_elapsed_minutes}分`"
+        >
+          <span aria-hidden="true">
+            <span class="order-elapsed-prefix">注文から</span>{{ order.ordered_elapsed_minutes }}分
+          </span>
+        </span>
         <span>{{ order.guest_count }}名</span>
         <span v-if="order.table_category && order.table_category !== '未分類'" class="order-table-category">
           {{ order.table_category }}

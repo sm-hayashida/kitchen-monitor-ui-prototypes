@@ -20,6 +20,15 @@ export const viewModeGroups = [
       { id: 'table-n-scroll', label: 'N型・横スクロール' },
     ],
   },
+  {
+    id: 'list',
+    label: 'リスト型',
+    shortLabel: 'リスト型',
+    defaultView: 'list',
+    views: [
+      { id: 'list', label: '現行互換・リスト型' },
+    ],
+  },
 ];
 
 export function resolveViewModeGroup(viewId) {

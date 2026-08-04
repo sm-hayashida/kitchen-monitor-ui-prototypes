@@ -561,6 +561,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
     'order',
     'table-n-scroll',
     'table-n-page',
+    'list',
   ];
   const rawHash = String(hash ?? '').replace(/^#/, '');
   const [rawRoute = '', rawQuery = ''] = rawHash.split('?');

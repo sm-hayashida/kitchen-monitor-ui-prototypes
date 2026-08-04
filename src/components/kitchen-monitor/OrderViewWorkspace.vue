@@ -1,5 +1,4 @@
 <script setup>
-import { ListFilter } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import { createOrderCardSegments } from '../../features/kitchen-monitor/orderCardSegments';
 import {
@@ -9,6 +8,7 @@ import {
 import { createScenarioOrders } from '../../features/kitchen-monitor/comparisonScenarios';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { useColumnLayoutPreference } from '../../features/kitchen-monitor/useColumnLayoutPreference';
+import { useKitchenMonitorSettings } from '../../features/kitchen-monitor/useKitchenMonitorSettings';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import {
   sortOrdersByPinned,
@@ -18,8 +18,8 @@ import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMoc
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
 import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
+import KitchenMonitorSettingsModal from './KitchenMonitorSettingsModal.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
-import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
 import OrderViewCard from './OrderViewCard.vue';
 import ProductAggregateModal from './ProductAggregateModal.vue';
 
@@ -55,12 +55,18 @@ const comparison = useComparisonStore();
 const quantitySelectionInAggregate = computed(
   () => comparison.settings.quantityInteractionMode === 'aggregate',
 );
-const scenarioOrders = computed(() => [
-  ...createScenarioOrders(comparison.settings.scenario),
-  ...comparison.reviewOrders.value,
-]);
+const { ordersCleared } = useKitchenMonitorSettings();
+const scenarioOrders = computed(() => (
+  ordersCleared.value
+    ? []
+    : [
+      ...createScenarioOrders(comparison.settings.scenario),
+      ...comparison.reviewOrders.value,
+    ]
+));
 const comparisonPageClass = computed(() => [
   'order-view-layout',
+  `comparison-columns-${columnCount.value}`,
   `comparison-rows-${comparison.settings.rowSpacing}`,
   comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
 ].join(' '));
@@ -70,7 +76,7 @@ const cardEstimateOptions = computed(() => ({
   rowSpacing: comparison.settings.rowSpacing,
   visibleInfo: comparison.settings.info,
 }));
-const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
+const { columnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
@@ -107,8 +113,6 @@ const {
 const { pinnedOrderIds, togglePinned: toggleOrderPinnedPreference } = useOrderLayoutPreferences();
 
 const {
-  departments,
-  saveDepartments,
   selectedCategoryIds,
   selectedDepartmentIds,
 } = useOrderDepartmentSettings();
@@ -197,15 +201,6 @@ function toggleOrderPinned(orderId) {
   nextTick(() => horizontalScrollerRef.value?.scrollToColumn(0));
 }
 
-function saveDepartmentSettings(departmentIds, preferences = {}) {
-  saveDepartments(departmentIds);
-  if (preferences.columnCountPreference !== undefined) {
-    setColumnCountPreference(preferences.columnCountPreference);
-  }
-  closeAggregate();
-  closeItemAction();
-  isSettingsOpen.value = false;
-}
 </script>
 
 <template>
@@ -233,16 +228,6 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
         @previous-column="scrollOrderByColumn(-1)"
         @next-column="scrollOrderByColumn(1)"
       />
-      <button
-        class="top-bar-icon-button top-bar-filter-button"
-        type="button"
-        aria-label="表示部門を変更"
-        title="表示部門"
-        @click="isSettingsOpen = true"
-      >
-        <ListFilter :size="18" :stroke-width="2.2" aria-hidden="true" />
-        <span>{{ selectedDepartmentIds.length }}</span>
-      </button>
     </template>
 
     <div
@@ -381,14 +366,10 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
     />
 
     <template #overlay>
-      <OrderDepartmentSettingsModal
+      <KitchenMonitorSettingsModal
         v-if="isSettingsOpen"
         :active-view="activeView"
-        :column-count-preference="columnCountPreference"
-        :departments="departments"
-        :selected-department-ids="selectedDepartmentIds"
         @close="isSettingsOpen = false"
-        @save="saveDepartmentSettings"
         @switch-view="$emit('switch-view', $event)"
       />
     </template>

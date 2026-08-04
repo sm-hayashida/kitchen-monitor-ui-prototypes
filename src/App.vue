@@ -6,6 +6,8 @@ import {
   provideComparisonStore,
 } from './features/kitchen-monitor/comparisonState';
 import { useColumnLayoutPreference } from './features/kitchen-monitor/useColumnLayoutPreference';
+import { useKitchenMonitorSettings } from './features/kitchen-monitor/useKitchenMonitorSettings';
+import KitchenMonitorLegacyListPage from './pages/KitchenMonitorLegacyListPage.vue';
 import KitchenMonitorOrderPage from './pages/KitchenMonitorOrderPage.vue';
 import KitchenMonitorOrderNPagedPage from './pages/KitchenMonitorOrderNPagedPage.vue';
 import KitchenMonitorOrderNScrollPage from './pages/KitchenMonitorOrderNScrollPage.vue';
@@ -20,6 +22,7 @@ const pages = {
   'order-n-scroll': KitchenMonitorOrderNScrollPage,
   'table-n-page': KitchenMonitorTableNPagedPage,
   'table-n-scroll': KitchenMonitorTableNScrollPage,
+  list: KitchenMonitorLegacyListPage,
 };
 
 const activeView = ref(resolveView());
@@ -27,10 +30,12 @@ const activePage = computed(() => pages[activeView.value] ?? pages[defaultView])
 const comparison = createComparisonStore(window.location.hash);
 provideComparisonStore(comparison);
 const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
+const { orderDataRevision } = useKitchenMonitorSettings();
 const activePageKey = computed(() => [
   activeView.value,
   comparison.settings.scenario,
   comparison.reviewOrderRevision.value,
+  orderDataRevision.value,
 ].join(':'));
 const comparisonTokenClasses = computed(() => [
   'comparison-token-root',

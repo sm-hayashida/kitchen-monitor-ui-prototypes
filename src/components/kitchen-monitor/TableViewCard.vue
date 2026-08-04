@@ -6,6 +6,7 @@ import {
   getOrderTimingStatus,
   summarizeOrderTimings,
 } from '../../features/kitchen-monitor/orderTimingStatus';
+import { createTableNumberStyle } from '../../features/kitchen-monitor/tableNumberPresentation';
 import OrderItemRow from './OrderItemRow.vue';
 
 const props = defineProps({
@@ -117,8 +118,18 @@ function orderGroupTiming(orderGroup) {
   >
     <header v-if="!isContinuation" class="table-view-card-head">
       <div class="table-view-primary-meta">
-        <strong>{{ table.table_no }}</strong>
-        <span class="timing-elapsed">最古 {{ table.earliest_elapsed_minutes }}分</span>
+        <strong
+          class="table-number-label"
+          :style="createTableNumberStyle(table.table_no)"
+        >{{ table.table_no }}</strong>
+        <span
+          class="timing-elapsed"
+          :aria-label="`最古${table.earliest_elapsed_minutes}分`"
+        >
+          <span aria-hidden="true">
+            <span class="table-elapsed-prefix">最古 </span>{{ table.earliest_elapsed_minutes }}分
+          </span>
+        </span>
         <span>{{ table.orders.length }}注文</span>
         <span>{{ table.guest_count }}名</span>
       </div>

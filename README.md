@@ -1,6 +1,6 @@
 # Kitchen Monitor UI Prototypes
 
-Kitchen Monitor の注文別表示とテーブル別表示を比較するための Vue 3 + Vite フロントモックです。
+Kitchen Monitor の注文別・テーブル別カードUIと、後方互換のリスト型を比較するための Vue 3 + Vite フロントモックです。
 
 固定モックデータのみを使用し、API通信や実運用データは含みません。iPad横画面での比較確認を想定しています。
 
@@ -13,10 +13,12 @@ Kitchen Monitor の注文別表示とテーブル別表示を比較するため�
 - テーブル別
   - [`#table-n-scroll`](./#table-n-scroll): N型・横スクロール（基本候補）
   - [`#table-n-page`](./#table-n-page): N型・ページ送り
+- 後方互換
+  - [`#list`](./#list): 稼働中Kitchen Monitor相当のリスト型
 
 未指定URLや旧URLは`#order-n-scroll`へフォールバックします。
 
-数量は「対象商品の残数 / 全注文の同一商品未調理合計」で表示します。ヘッダーの「比較」から比較レイアウトとカード列数、歯車の設定から表示部門とテーブルグループ化を変更できます。
+数量は「対象商品の残数 / 全注文の同一商品未調理合計」で表示します。右下の「比較ラボ」ではレイアウト、列数、数量操作、任意注文などを比較できます。ヘッダーの歯車から、稼働中Kitchen Monitorの設定11項目と新しい表示・操作設定を変更できます。
 
 ## ローカル起動
 
@@ -39,7 +41,8 @@ npm run preview
 ## 主なファイル
 
 - `src/pages/`: 比較画面単位のページコンポーネント
-- `src/components/kitchen-monitor/`: 注文・テーブルカード、設定、数量変更、横スクロール
+- `src/components/kitchen-monitor/`: 注文・テーブルカード、共通設定、数量変更、横スクロール
+- `src/pages/KitchenMonitorLegacyListPage.vue`: 稼働中画面を固定データへ移植したリスト型
 - `src/features/kitchen-monitor/orderViewMockData.js`: 注文別表示用の固定注文データ
 - `src/features/kitchen-monitor/useOrderViewMock.js`: 商品横断集計、完了、取消のモック状態
 - `src/features/kitchen-monitor/useResponsiveColumnLayout.js`: 利用可能幅に応じた列数計算

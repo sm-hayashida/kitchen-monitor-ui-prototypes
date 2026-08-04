@@ -1,10 +1,10 @@
 <script setup>
 import { Settings, Volume2, VolumeX } from '@lucide/vue';
-import { ref } from 'vue';
 import {
   resolveViewModeGroup,
   viewModeGroups,
 } from '../../features/kitchen-monitor/viewModeOptions';
+import { useKitchenMonitorSettings } from '../../features/kitchen-monitor/useKitchenMonitorSettings';
 
 const props = defineProps({
   activeView: {
@@ -14,15 +14,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['open-settings', 'switch-view']);
-const soundEnabled = ref(window.localStorage.getItem('kitchen-monitor-sound') !== 'off');
+const { saveSettings, settings } = useKitchenMonitorSettings();
 
 function switchView(viewId) {
   emit('switch-view', viewId);
 }
 
 function toggleSound() {
-  soundEnabled.value = !soundEnabled.value;
-  window.localStorage.setItem('kitchen-monitor-sound', soundEnabled.value ? 'on' : 'off');
+  saveSettings({ masterSoundEnabled: !settings.masterSoundEnabled });
 }
 </script>
 
@@ -45,12 +44,12 @@ function toggleSound() {
       <button
         class="top-bar-icon-button"
         type="button"
-        :aria-label="soundEnabled ? '通知音を消す' : '通知音を有効にする'"
-        :aria-pressed="soundEnabled"
-        :title="soundEnabled ? '通知音オン' : '通知音オフ'"
+        :aria-label="settings.masterSoundEnabled ? '通知音を消す' : '通知音を有効にする'"
+        :aria-pressed="settings.masterSoundEnabled"
+        :title="settings.masterSoundEnabled ? '通知音オン' : '通知音オフ'"
         @click="toggleSound"
       >
-        <Volume2 v-if="soundEnabled" :size="18" :stroke-width="2.2" aria-hidden="true" />
+        <Volume2 v-if="settings.masterSoundEnabled" :size="18" :stroke-width="2.2" aria-hidden="true" />
         <VolumeX v-else :size="18" :stroke-width="2.2" aria-hidden="true" />
       </button>
       <button

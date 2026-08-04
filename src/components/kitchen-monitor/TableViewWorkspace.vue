@@ -1,5 +1,5 @@
 <script setup>
-import { ArrowUpDown, LayoutGrid, ListFilter } from '@lucide/vue';
+import { ArrowUpDown, LayoutGrid } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import {
   createCompactFlowColumns,
@@ -16,14 +16,15 @@ import {
 } from '../../features/kitchen-monitor/tableViewModel';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
 import { useColumnLayoutPreference } from '../../features/kitchen-monitor/useColumnLayoutPreference';
+import { useKitchenMonitorSettings } from '../../features/kitchen-monitor/useKitchenMonitorSettings';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import { useOrderViewMock } from '../../features/kitchen-monitor/useOrderViewMock';
 import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useResponsiveColumnLayout';
 import { useTableLayoutPreferences } from '../../features/kitchen-monitor/useTableLayoutPreferences';
 import HeaderLayoutNavigation from './HeaderLayoutNavigation.vue';
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
+import KitchenMonitorSettingsModal from './KitchenMonitorSettingsModal.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
-import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
 import ProductAggregateModal from './ProductAggregateModal.vue';
 import TableViewCard from './TableViewCard.vue';
 
@@ -60,12 +61,18 @@ const comparison = useComparisonStore();
 const quantitySelectionInAggregate = computed(
   () => comparison.settings.quantityInteractionMode === 'aggregate',
 );
-const scenarioOrders = computed(() => [
-  ...createScenarioOrders(comparison.settings.scenario),
-  ...comparison.reviewOrders.value,
-]);
+const { ordersCleared } = useKitchenMonitorSettings();
+const scenarioOrders = computed(() => (
+  ordersCleared.value
+    ? []
+    : [
+      ...createScenarioOrders(comparison.settings.scenario),
+      ...comparison.reviewOrders.value,
+    ]
+));
 const comparisonPageClass = computed(() => [
   'table-view-layout',
+  `comparison-columns-${columnCount.value}`,
   `comparison-rows-${comparison.settings.rowSpacing}`,
   comparison.settings.motion ? 'comparison-motion-on' : 'comparison-motion-off',
 ].join(' '));
@@ -79,7 +86,7 @@ const timingOptions = computed(() => ({
   targetMinutes: comparison.settings.targetMinutes,
   warningWindowMinutes: comparison.settings.warningMinutes,
 }));
-const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
+const { columnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'n-scroll' ? 8 : 0,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
@@ -113,8 +120,6 @@ const {
 });
 
 const {
-  departments,
-  saveDepartments,
   selectedCategoryIds,
   selectedDepartmentIds,
 } = useOrderDepartmentSettings();
@@ -332,19 +337,6 @@ function toggleTablePinned(tableId) {
   currentPage.value = 1;
 }
 
-function saveDepartmentSettings(departmentIds, preferences = {}) {
-  saveDepartments(departmentIds);
-  if (preferences.columnCountPreference !== undefined) {
-    setColumnCountPreference(preferences.columnCountPreference);
-  }
-  if (typeof preferences.tableGroupingEnabled === 'boolean') {
-    tableGroupingEnabled.value = preferences.tableGroupingEnabled;
-  }
-  closeAggregate();
-  closeItemAction();
-  isSettingsOpen.value = false;
-}
-
 async function jumpToTableCategory(event) {
   const groupId = event.target.value;
   const targetGroup = tableCategoryIndex.value.find((group) => group.id === groupId);
@@ -420,16 +412,6 @@ function syncActiveTableCategory(columnIndex) {
         @click="toggleReorderMode"
       >
         <ArrowUpDown :size="18" :stroke-width="2.2" aria-hidden="true" />
-      </button>
-      <button
-        class="top-bar-icon-button top-bar-filter-button"
-        type="button"
-        aria-label="表示部門を変更"
-        title="表示部門"
-        @click="isSettingsOpen = true"
-      >
-        <ListFilter :size="18" :stroke-width="2.2" aria-hidden="true" />
-        <span>{{ selectedDepartmentIds.length }}</span>
       </button>
     </template>
 
@@ -589,16 +571,10 @@ function syncActiveTableCategory(columnIndex) {
     />
 
     <template #overlay>
-      <OrderDepartmentSettingsModal
+      <KitchenMonitorSettingsModal
         v-if="isSettingsOpen"
         :active-view="activeView"
-        :column-count-preference="columnCountPreference"
-        :departments="departments"
-        :selected-department-ids="selectedDepartmentIds"
-        show-table-grouping-option
-        :table-grouping-enabled="tableGroupingEnabled"
         @close="isSettingsOpen = false"
-        @save="saveDepartmentSettings"
         @switch-view="$emit('switch-view', $event)"
       />
     </template>

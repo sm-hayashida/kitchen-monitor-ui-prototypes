@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
+import { createTableNumberStyle } from '../../features/kitchen-monitor/tableNumberPresentation';
 
 const props = defineProps({
   aggregate: {
@@ -161,7 +162,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             :aria-label="isSourceOrder(match) ? `表示元の注文 ${match.order.order_id}` : undefined"
           >
             <header>
-              <strong>
+              <strong
+                class="table-number-label"
+                :style="createTableNumberStyle(match.order.table_no)"
+              >
                 {{ match.order.table_no }}
                 <i v-if="isSourceOrder(match)" class="aggregate-source-badge">表示元</i>
               </strong>
