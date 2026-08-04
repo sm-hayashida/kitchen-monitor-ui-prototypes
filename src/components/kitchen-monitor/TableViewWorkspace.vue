@@ -57,6 +57,9 @@ const horizontalNavigation = ref({
 const activeTableCategoryId = ref('');
 const isPaged = computed(() => props.layout === 'n-paged');
 const comparison = useComparisonStore();
+const quantitySelectionInAggregate = computed(
+  () => comparison.settings.quantityInteractionMode === 'aggregate',
+);
 const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
 const comparisonPageClass = computed(() => [
   'table-view-layout',
@@ -269,6 +272,10 @@ function scrollTableByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
+function openAggregateForQuantityMode(aggregateKey) {
+  openAggregate(aggregateKey, { includeCompleted: quantitySelectionInAggregate.value });
+}
+
 function toggleReorderMode() {
   if (!isReorderMode.value) {
     setManualOrder(orderedTableIds.value);
@@ -473,7 +480,7 @@ function syncActiveTableCategory(columnIndex) {
                 @cancel-item-completion="cancelItemCompletion"
                 @complete-item="completeTableItemRemaining"
                 @move-table="moveTableInOrder(table.source_table_id, $event)"
-                @open-aggregate="openAggregate"
+                @open-aggregate="openAggregateForQuantityMode"
                 @set-item-processed-quantity="setTableItemProcessedQuantity"
                 @toggle-item-action="toggleItemAction"
                 @toggle-pinned="toggleTablePinned"
@@ -508,7 +515,7 @@ function syncActiveTableCategory(columnIndex) {
               @cancel-item-completion="cancelItemCompletion"
               @complete-item="completeTableItemRemaining"
               @move-table="moveTableInOrder(table.source_table_id, $event)"
-              @open-aggregate="openAggregate"
+              @open-aggregate="openAggregateForQuantityMode"
               @set-item-processed-quantity="setTableItemProcessedQuantity"
               @toggle-item-action="toggleItemAction"
               @toggle-pinned="toggleTablePinned"
@@ -565,7 +572,9 @@ function syncActiveTableCategory(columnIndex) {
     <ProductAggregateModal
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
+      :quantity-selection-enabled="quantitySelectionInAggregate"
       @close="closeAggregate"
+      @set-item-processed-quantity="setTableItemProcessedQuantity"
     />
 
     <template #overlay>

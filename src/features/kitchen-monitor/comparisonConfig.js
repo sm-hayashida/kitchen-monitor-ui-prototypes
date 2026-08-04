@@ -16,6 +16,7 @@ export const comparisonDefaults = Object.freeze({
   rowSpacing: 'standard',
   quantityMode: 'current',
   quantityDisplayStyle: 'n',
+  quantityInteractionMode: 'inline',
   itemTapMode: 'all',
   orderUndoMs: 3000,
   itemHideMs: 5000,
@@ -41,6 +42,7 @@ const allCurrentRecipeFields = Object.freeze({
   rowSpacing: 'standard',
   quantityMode: 'current',
   quantityDisplayStyle: 'n',
+  quantityInteractionMode: 'inline',
   itemTapMode: 'all',
   orderUndoMs: 3000,
   itemHideMs: 5000,
@@ -147,6 +149,26 @@ export const comparisonRecipes = Object.freeze({
       itemTapMode: 'safe',
       orderUndoMs: 5000,
       itemHideMs: 8000,
+      targetMinutes: 15,
+      warningMinutes: 3,
+      motion: true,
+      info: fullInfo,
+    },
+  }),
+  aggregateQuantity: createRecipe({
+    group: 'operation',
+    label: '内訳で数量変更',
+    purpose: '同一商品の注文を見ながら数量を選択',
+    effectSummary: '数量タップ→内訳モーダル',
+    settings: {
+      scenario: 'normal',
+      cardMinWidth: 320,
+      rowSpacing: 'standard',
+      quantityMode: 'current',
+      quantityInteractionMode: 'aggregate',
+      itemTapMode: 'all',
+      orderUndoMs: 3000,
+      itemHideMs: 5000,
       targetMinutes: 15,
       warningMinutes: 3,
       motion: true,
@@ -275,6 +297,11 @@ export const comparisonItemTapModeOptions = Object.freeze([
   Object.freeze({ id: 'safe', label: '1個だけ即完了・複数は数量確認' }),
 ]);
 
+export const comparisonQuantityInteractionModeOptions = Object.freeze([
+  Object.freeze({ id: 'inline', label: '現行：その場で数量変更' }),
+  Object.freeze({ id: 'aggregate', label: '内訳：同一商品一覧で数量変更' }),
+]);
+
 export const comparisonLabels = Object.freeze({
   scenarios: Object.freeze({
     normal: '通常',
@@ -297,6 +324,11 @@ export const comparisonLabels = Object.freeze({
   quantityDisplayStyles: Object.freeze(
     Object.fromEntries(
       comparisonQuantityDisplayStyleOptions.map((option) => [option.id, option.label]),
+    ),
+  ),
+  quantityInteractionModes: Object.freeze(
+    Object.fromEntries(
+      comparisonQuantityInteractionModeOptions.map((option) => [option.id, option.label]),
     ),
   ),
   itemTapModes: Object.freeze(
@@ -327,6 +359,9 @@ export const comparisonOptions = Object.freeze({
   quantityDisplayStyles: Object.freeze(
     comparisonQuantityDisplayStyleOptions.map((option) => option.id),
   ),
+  quantityInteractionModes: Object.freeze(
+    comparisonQuantityInteractionModeOptions.map((option) => option.id),
+  ),
   itemTapModes: Object.freeze(comparisonItemTapModeOptions.map((option) => option.id)),
   orderUndoMs: Object.freeze([0, 2000, 3000, 5000]),
   itemHideMs: Object.freeze([0, 3000, 5000, 8000]),
@@ -344,6 +379,7 @@ export const comparisonQueryKeys = Object.freeze({
   rowSpacing: 'cmp_rows',
   quantityMode: 'cmp_qty',
   quantityDisplayStyle: 'cmp_qty_style',
+  quantityInteractionMode: 'cmp_qty_action',
   itemTapMode: 'cmp_item_tap',
   orderUndoMs: 'cmp_order_undo',
   itemHideMs: 'cmp_item_hide',
@@ -362,6 +398,7 @@ const recipeFieldKeys = Object.freeze([
   'cardMinWidth',
   'rowSpacing',
   'quantityMode',
+  'quantityInteractionMode',
   'itemTapMode',
   'orderUndoMs',
   'itemHideMs',
@@ -377,6 +414,7 @@ const differenceFieldLabels = Object.freeze({
   rowSpacing: '行間',
   quantityMode: '数量',
   quantityDisplayStyle: '数量表示',
+  quantityInteractionMode: '数量操作',
   itemTapMode: '商品タップ',
   orderUndoMs: '注文取消',
   itemHideMs: '商品非表示',
@@ -423,6 +461,11 @@ export function normalizeComparisonSettings(candidate = {}) {
       candidate.quantityDisplayStyle,
       comparisonOptions.quantityDisplayStyles,
       comparisonDefaults.quantityDisplayStyle,
+    ),
+    quantityInteractionMode: enumValue(
+      candidate.quantityInteractionMode,
+      comparisonOptions.quantityInteractionModes,
+      comparisonDefaults.quantityInteractionMode,
     ),
     itemTapMode: enumValue(
       candidate.itemTapMode,
@@ -523,6 +566,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   assignString(candidate, 'rowSpacing', params.get(comparisonQueryKeys.rowSpacing));
   assignString(candidate, 'quantityMode', params.get(comparisonQueryKeys.quantityMode));
   assignString(candidate, 'quantityDisplayStyle', params.get(comparisonQueryKeys.quantityDisplayStyle));
+  assignString(candidate, 'quantityInteractionMode', params.get(comparisonQueryKeys.quantityInteractionMode));
   assignString(candidate, 'itemTapMode', params.get(comparisonQueryKeys.itemTapMode));
   assignNumber(candidate, 'orderUndoMs', params.get(comparisonQueryKeys.orderUndoMs));
   assignNumber(candidate, 'itemHideMs', params.get(comparisonQueryKeys.itemHideMs));
@@ -584,6 +628,13 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
   );
   appendSetting(
     params,
+    comparisonQueryKeys.quantityInteractionMode,
+    normalized.quantityInteractionMode,
+    comparisonDefaults.quantityInteractionMode,
+    options,
+  );
+  appendSetting(
+    params,
     comparisonQueryKeys.itemTapMode,
     normalized.itemTapMode,
     comparisonDefaults.itemTapMode,
@@ -629,6 +680,7 @@ function createRecipe(recipe) {
   return Object.freeze({
     ...recipe,
     settings: Object.freeze({
+      quantityInteractionMode: comparisonDefaults.quantityInteractionMode,
       ...recipe.settings,
       info: Object.freeze([...recipe.settings.info]),
     }),
@@ -723,6 +775,9 @@ function getComparisonValueLabel(key, value) {
   }
   if (key === 'quantityDisplayStyle') {
     return comparisonLabels.quantityDisplayStyles[value];
+  }
+  if (key === 'quantityInteractionMode') {
+    return comparisonLabels.quantityInteractionModes[value];
   }
   if (key === 'itemTapMode') {
     return comparisonLabels.itemTapModes[value];

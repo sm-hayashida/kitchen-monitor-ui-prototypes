@@ -19,6 +19,7 @@ export function useOrderViewMock({
   const orders = ref(structuredClone(toValue(initialOrders)));
   const selectedCategoryId = ref('all');
   const selectedAggregateKey = ref(null);
+  const selectedAggregateIncludesCompleted = ref(false);
   const activeItemActionId = ref(null);
   const completionStartedAt = ref({});
   const itemCompletionStartedAt = ref({});
@@ -68,7 +69,7 @@ export function useOrderViewMock({
     );
   });
 
-  const aggregateByKey = computed(() => {
+  function buildAggregates({ includeCompleted = false } = {}) {
     const aggregates = {};
 
     orders.value.forEach((order) => {
@@ -77,7 +78,7 @@ export function useOrderViewMock({
           processedUnitNumbersByItemId.value[orderItem.order_item_id]?.length ?? 0;
         const pendingQuantity = orderItem.quantity - processedQuantity;
 
-        if (pendingQuantity <= 0) {
+        if (!includeCompleted && pendingQuantity <= 0) {
           return;
         }
 
@@ -93,7 +94,7 @@ export function useOrderViewMock({
           matches: [],
         });
 
-        aggregate.totalQuantity += pendingQuantity;
+        aggregate.totalQuantity += Math.max(0, pendingQuantity);
         aggregate.matches.push({
           order,
           orderItem: {
@@ -116,22 +117,31 @@ export function useOrderViewMock({
     });
 
     return aggregates;
-  });
+  }
+
+  const aggregateByKey = computed(() => buildAggregates());
+  const allAggregateByKey = computed(() => buildAggregates({ includeCompleted: true }));
 
   const selectedAggregate = computed(
-    () => aggregateByKey.value[selectedAggregateKey.value] ?? null,
+    () => (
+      selectedAggregateIncludesCompleted.value
+        ? allAggregateByKey.value
+        : aggregateByKey.value
+    )[selectedAggregateKey.value] ?? null,
   );
   function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId;
   }
 
-  function openAggregate(aggregateKey) {
+  function openAggregate(aggregateKey, { includeCompleted = false } = {}) {
     closeItemAction();
+    selectedAggregateIncludesCompleted.value = includeCompleted;
     selectedAggregateKey.value = aggregateKey;
   }
 
   function closeAggregate() {
     selectedAggregateKey.value = null;
+    selectedAggregateIncludesCompleted.value = false;
   }
 
   function toggleItemAction(orderItemId) {

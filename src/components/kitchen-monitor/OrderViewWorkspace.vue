@@ -48,6 +48,9 @@ const horizontalNavigation = ref({
 const isPaged = computed(() => props.layout === 'n-paged');
 const isScroll = computed(() => props.layout === 'n-scroll');
 const comparison = useComparisonStore();
+const quantitySelectionInAggregate = computed(
+  () => comparison.settings.quantityInteractionMode === 'aggregate',
+);
 const scenarioOrders = computed(() => createScenarioOrders(comparison.settings.scenario));
 const comparisonPageClass = computed(() => [
   'order-view-layout',
@@ -163,6 +166,10 @@ function scrollOrderByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
+function openAggregateForQuantityMode(aggregateKey) {
+  openAggregate(aggregateKey, { includeCompleted: quantitySelectionInAggregate.value });
+}
+
 function saveDepartmentSettings(departmentIds, preferences = {}) {
   saveDepartments(departmentIds);
   if (preferences.columnCountPreference !== undefined) {
@@ -246,7 +253,7 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
                 @cancel-item-completion="cancelItemCompletion"
                 @complete-item="completeItemRemaining"
                 @complete-order="toggleOrderCompletion"
-                @open-aggregate="openAggregate"
+                @open-aggregate="openAggregateForQuantityMode"
                 @set-item-processed-quantity="setItemProcessedQuantity"
                 @toggle-item-action="toggleItemAction"
               />
@@ -279,7 +286,7 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
               @cancel-item-completion="cancelItemCompletion"
               @complete-item="completeItemRemaining"
               @complete-order="toggleOrderCompletion"
-              @open-aggregate="openAggregate"
+              @open-aggregate="openAggregateForQuantityMode"
               @set-item-processed-quantity="setItemProcessedQuantity"
               @toggle-item-action="toggleItemAction"
             />
@@ -335,7 +342,9 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
     <ProductAggregateModal
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
+      :quantity-selection-enabled="quantitySelectionInAggregate"
       @close="closeAggregate"
+      @set-item-processed-quantity="setItemProcessedQuantity"
     />
 
     <template #overlay>

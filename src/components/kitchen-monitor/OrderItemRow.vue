@@ -61,6 +61,9 @@ const showOptions = computed(() => comparison.enabledInfo.value.has('options'));
 const showItemMemo = computed(() => comparison.enabledInfo.value.has('itemMemo'));
 const showAggregate = computed(() => comparison.enabledInfo.value.has('aggregate'));
 const quantityDisplayStyle = computed(() => comparison.settings.quantityDisplayStyle ?? 'n');
+const usesAggregateQuantityModal = computed(
+  () => comparison.settings.quantityInteractionMode === 'aggregate',
+);
 const visibleToppings = computed(() =>
   showOptions.value ? inlineDetails.value.visibleToppings : [],
 );
@@ -101,11 +104,29 @@ const bodyAction = computed(() => decideItemBodyAction({
   remainingCount: remainingCount.value,
 }));
 const requiresQuantityConfirmation = computed(() => bodyAction.value === 'open-modal');
+const quantityActionAriaLabel = computed(() =>
+  usesAggregateQuantityModal.value
+    ? `${displayName.value}の同一商品一覧を開いて調理済み数を変更`
+    : `${displayName.value}の調理済み数をその場で変更`,
+);
 const rowAriaLabel = computed(() =>
   requiresQuantityConfirmation.value
-    ? `${displayName.value}の調理済み数を選択する`
+    ? quantityActionAriaLabel.value
     : `${displayName.value}の残り${remainingCount.value}個をすべて調理済みにする`,
 );
+
+function openQuantityAction() {
+  if (props.interactionsDisabled) {
+    return;
+  }
+
+  if (usesAggregateQuantityModal.value && aggregate.value) {
+    emit('open-aggregate', aggregateKey.value);
+    return;
+  }
+
+  emit('toggle-item-action', props.orderItem.order_item_id);
+}
 
 function completeRow() {
   if (!canCompleteRow.value) {
@@ -113,7 +134,7 @@ function completeRow() {
   }
 
   if (requiresQuantityConfirmation.value) {
-    emit('toggle-item-action', props.orderItem.order_item_id);
+    openQuantityAction();
     return;
   }
 
@@ -141,6 +162,7 @@ const emit = defineEmits([
       [`quantity-style-${quantityDisplayStyle}`]: true,
       'quantity-side-right': quantityDisplay.isRightAligned,
       'has-aggregate-quantity': quantityDisplay.showAggregateButton,
+      'quantity-action-aggregate': usesAggregateQuantityModal,
     }"
     @click="completeRow"
   >
@@ -150,8 +172,8 @@ const emit = defineEmits([
       :class="{ partial: processedCount > 0 && remainingCount > 0 }"
       type="button"
       :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の残数${remainingCount}、同一商品の残数合計${aggregateRemainingCount}。調理済み数を変更`"
-      @click.stop="$emit('toggle-item-action', orderItem.order_item_id)"
+      :aria-label="quantityActionAriaLabel"
+      @click.stop="openQuantityAction"
     >
       <span class="quantity-main-label">{{ quantityDisplay.primaryLabel }}</span>
       <span v-if="quantityDisplay.showLeftAggregateTotal" class="quantity-sub-label">
@@ -197,8 +219,8 @@ const emit = defineEmits([
         :class="{ partial: processedCount > 0 && remainingCount > 0 }"
         type="button"
         :disabled="interactionsDisabled"
-        :aria-label="`${displayName}の調理済み数を変更`"
-        @click.stop="$emit('toggle-item-action', orderItem.order_item_id)"
+        :aria-label="quantityActionAriaLabel"
+        @click.stop="openQuantityAction"
       >
         <span>{{ quantityDisplay.primaryLabel }}</span>
       </button>
@@ -207,8 +229,8 @@ const emit = defineEmits([
         class="order-item-source-quantity"
         type="button"
         :disabled="interactionsDisabled"
-        :aria-label="`${displayName}の注文数量${orderItem.quantity}。調理済み数を変更`"
-        @click.stop="$emit('toggle-item-action', orderItem.order_item_id)"
+        :aria-label="quantityActionAriaLabel"
+        @click.stop="openQuantityAction"
       >
         {{ quantityDisplay.sourceTotalLabel }}
       </button>
@@ -225,7 +247,11 @@ const emit = defineEmits([
     </div>
 
     <div
-      v-if="!interactionsDisabled && activeItemActionId === orderItem.order_item_id"
+      v-if="
+        !usesAggregateQuantityModal &&
+          !interactionsDisabled &&
+          activeItemActionId === orderItem.order_item_id
+      "
       class="item-quantity-menu quantity-picker"
       @click.stop
     >

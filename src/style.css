@@ -3572,6 +3572,100 @@ button {
   padding: 6px 8px;
 }
 
+.aggregate-order-tile.quantity-selection-enabled {
+  border-color: #cbd5e1;
+}
+
+.aggregate-order-tile.quantity-selection-enabled.fully-processed {
+  border-color: #86efac;
+}
+
+.aggregate-order-tile.quantity-selection-enabled.fully-processed > header {
+  background: #f0fdf4;
+}
+
+.aggregate-quantity-editor {
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 8px;
+}
+
+.aggregate-quantity-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 0 2px 7px;
+}
+
+.aggregate-quantity-editor-head strong {
+  color: #111827;
+  font-size: 12px;
+}
+
+.aggregate-quantity-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.aggregate-quantity-choice-grid button,
+.aggregate-quantity-stepper button {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  touch-action: manipulation;
+}
+
+.aggregate-quantity-choice-grid button.selected {
+  border-color: #f97316;
+  background: #fff7ed;
+  color: #c2410c;
+  box-shadow: inset 0 0 0 1px #f97316;
+}
+
+.aggregate-quantity-choice-grid button:focus-visible,
+.aggregate-quantity-stepper button:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 1px;
+}
+
+.aggregate-quantity-stepper {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 6px;
+}
+
+.aggregate-quantity-stepper > strong {
+  color: #111827;
+  font-size: 13px;
+  text-align: center;
+}
+
+.aggregate-quantity-stepper button:disabled {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  cursor: default;
+}
+
+.aggregate-quantity-stepper .aggregate-quantity-complete {
+  min-height: 34px;
+  grid-column: 1 / -1;
+  border-color: #fb923c;
+  color: #c2410c;
+  font-size: 11px;
+}
+
 .aggregate-pagination {
   display: flex;
   min-height: 50px;

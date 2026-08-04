@@ -8,6 +8,7 @@ import {
   comparisonLabels,
   comparisonOptions,
   comparisonQuantityDisplayStyleOptions,
+  comparisonQuantityInteractionModeOptions,
   comparisonRecipeGroups,
   comparisonRecipes,
   comparisonThemeOptions,
@@ -167,7 +168,7 @@ async function copyShareUrl() {
         <span v-for="chip in differenceSummary.chips" :key="chip">{{ chip }}</span>
         <span v-if="differenceSummary.extraCount > 0">ほか{{ differenceSummary.extraCount }}件</span>
       </div>
-      <small>既定：N 左残数／合計・全情報・行タップで全完了</small>
+      <small>既定：N 左残数／合計・数量はその場で変更・行タップで全完了</small>
     </div>
 
     <div class="comparison-panel-scroll">
@@ -381,8 +382,23 @@ async function copyShareUrl() {
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
           <div><span>07</span><h3>操作と時間</h3></div>
-          <p>完了方法・取消猶予・警告時刻・動きを試します</p>
+          <p>数量アクセス・完了方法・取消猶予・警告時刻を試します</p>
         </header>
+        <label>
+          <span>数量操作</span>
+          <select
+            :value="comparison.settings.quantityInteractionMode"
+            @change="updateText('quantityInteractionMode', $event)"
+          >
+            <option
+              v-for="mode in comparisonQuantityInteractionModeOptions"
+              :key="mode.id"
+              :value="mode.id"
+            >
+              {{ mode.label }}
+            </option>
+          </select>
+        </label>
         <label>
           <span>商品タップ</span>
           <select :value="comparison.settings.itemTapMode" @change="updateText('itemTapMode', $event)">
