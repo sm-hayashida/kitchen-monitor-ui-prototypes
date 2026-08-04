@@ -7,6 +7,7 @@ import {
 } from './features/kitchen-monitor/comparisonState';
 import { useColumnLayoutPreference } from './features/kitchen-monitor/useColumnLayoutPreference';
 import { useKitchenMonitorSettings } from './features/kitchen-monitor/useKitchenMonitorSettings';
+import KitchenMonitorCompletedPage from './pages/KitchenMonitorCompletedPage.vue';
 import KitchenMonitorLegacyListPage from './pages/KitchenMonitorLegacyListPage.vue';
 import KitchenMonitorOrderPage from './pages/KitchenMonitorOrderPage.vue';
 import KitchenMonitorOrderNPagedPage from './pages/KitchenMonitorOrderNPagedPage.vue';
@@ -17,6 +18,7 @@ import KitchenMonitorTableNScrollPage from './pages/KitchenMonitorTableNScrollPa
 const defaultView = 'order-n-scroll';
 
 const pages = {
+  completed: KitchenMonitorCompletedPage,
   order: KitchenMonitorOrderPage,
   'order-n-page': KitchenMonitorOrderNPagedPage,
   'order-n-scroll': KitchenMonitorOrderNScrollPage,

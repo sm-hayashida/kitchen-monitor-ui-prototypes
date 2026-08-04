@@ -29,6 +29,15 @@ export const viewModeGroups = [
       { id: 'list', label: '現行互換・リスト型' },
     ],
   },
+  {
+    id: 'completed',
+    label: '調理済み',
+    shortLabel: '調理済み',
+    defaultView: 'completed',
+    views: [
+      { id: 'completed', label: '新UI・調理済み' },
+    ],
+  },
 ];
 
 export function resolveViewModeGroup(viewId) {
