@@ -52,9 +52,9 @@ const rows = computed(() => sourceOrders.value
       id: item.order_item_id,
       tableNo: order.table_no,
       elapsedMinutes: order.ordered_elapsed_minutes,
-      courseName: item.course_name ?? '',
+      course_name: item.course_name ?? '',
       name: item.name,
-      kitchenPrintName: item.kitchen_print_name ?? '',
+      custom_content_name: item.kitchen_print_name ?? '',
       memo: item.memo ?? '',
       toppings: item.toppings ?? [],
       quantity: item.quantity,
@@ -62,6 +62,26 @@ const rows = computed(() => sourceOrders.value
     })))
   .filter((row) => !removedItemIds.value.has(row.id))
   .sort(compareRows));
+
+const columns = [
+  { name: 'name', display: 'テーブル・番号', sortable: true, class: ' order-sort tw-cursor-pointer' },
+  { name: 'ordered_date', display: '経過時間', sortable: true, class: 'elapse-time order-sort tw-cursor-pointer' },
+  { name: 'course_name', display: 'コース', sortable: true, class: 'product-course-td order-sort tw-cursor-pointer' },
+  { name: 'menu', display: 'メニュー', sortable: true, class: 'product-desc order-sort tw-cursor-pointer' },
+  { name: 'topping', display: 'トッピング', sortable: false, class: 'text-left ' },
+  { name: 'quantity', display: '数量', sortable: false, class: 'course-qty-td ' },
+  { name: 'status', display: '状態', sortable: false, class: 'course-action-td ' },
+];
+
+const displayColumns = computed(() => columns.filter((column) => (
+  (column.name !== 'course_name' || settings.showCourseName)
+  && (column.name !== 'topping' || settings.showToppings)
+)));
+
+const densityClass = computed(() => [
+  `${settings.lineHeight}-density`,
+  `legacy-density-${settings.lineHeight}`,
+]);
 
 const visibleColumnCount = computed(() => 5
   + (settings.showCourseName ? 1 : 0)
@@ -86,7 +106,7 @@ function compareRows(left, right) {
   const direction = sortDirection.value === 'asc' ? 1 : -1;
   const fieldValue = (row) => {
     if (sortField.value === 'name') return row.tableNo;
-    if (sortField.value === 'course_name') return row.courseName;
+    if (sortField.value === 'course_name') return row.course_name;
     if (sortField.value === 'menu') return row.name;
     return row.elapsedMinutes;
   };
@@ -172,91 +192,110 @@ onBeforeUnmount(() => {
     @switch-view="$emit('switch-view', $event)"
   >
     <div class="legacy-list-workspace">
-      <div class="legacy-list-table-container">
-        <div class="legacy-list-table-scroll">
-          <table
-            class="legacy-order-table"
-            :class="`legacy-density-${settings.lineHeight}`"
-          >
-            <thead>
-              <tr>
-                <th class="sortable" :class="{ active: sortField === 'name' }" @click="toggleSort('name')">
-                  テーブル・番号
-                  <span>{{ sortField === 'name' ? (sortDirection === 'desc' ? '▼' : '▲') : '' }}</span>
-                </th>
-                <th class="sortable elapsed-column" :class="{ active: sortField === 'ordered_date' }" @click="toggleSort('ordered_date')">
-                  経過時間
-                  <span>{{ sortField === 'ordered_date' ? (sortDirection === 'desc' ? '▼' : '▲') : '' }}</span>
-                </th>
-                <th
-                  v-if="settings.showCourseName"
-                  class="sortable course-column"
-                  :class="{ active: sortField === 'course_name' }"
-                  @click="toggleSort('course_name')"
-                >
-                  コース
-                  <span>{{ sortField === 'course_name' ? (sortDirection === 'desc' ? '▼' : '▲') : '' }}</span>
-                </th>
-                <th class="sortable menu-column" :class="{ active: sortField === 'menu' }" @click="toggleSort('menu')">
-                  メニュー
-                  <span>{{ sortField === 'menu' ? (sortDirection === 'desc' ? '▼' : '▲') : '' }}</span>
-                </th>
-                <th v-if="settings.showToppings" class="topping-column">トッピング</th>
-                <th class="quantity-column">数量</th>
-                <th class="status-column">状態</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in rows" :key="row.id" :class="rowClass(row)" :data-row-id="row.id">
-                <td class="legacy-table-number">{{ row.tableNo }}</td>
-                <td class="legacy-elapsed-time">{{ String(row.elapsedMinutes).padStart(2, '0') }} 分</td>
-                <td v-if="settings.showCourseName" class="legacy-course-name">{{ row.courseName }}</td>
-                <td class="legacy-product-desc">
-                  <h6>{{ row.name }}</h6>
-                  <div>
-                    <p v-if="row.kitchenPrintName">{{ row.kitchenPrintName }}</p>
-                    <p v-if="row.memo">メモ：{{ row.memo }}</p>
-                  </div>
-                </td>
-                <td v-if="settings.showToppings" class="legacy-toppings">
-                  <span v-for="topping in row.toppings" :key="topping.id">
-                    - {{ topping.name }} x {{ topping.quantity * row.quantity }}
-                  </span>
-                </td>
-                <td class="legacy-quantity">{{ row.quantity }}</td>
-                <td class="legacy-status">
-                  <button
-                    v-if="row.status === 'started'"
-                    type="button"
-                    class="legacy-primary-button"
-                    :class="{ completing: completionStartedAt[row.id] }"
-                    :style="{ '--legacy-completion-progress': completionProgress(row.id) }"
-                    @click="toggleCompletion(row)"
-                  >
-                    {{ completionStartedAt[row.id] ? 'キャンセル' : '調理済にする' }}
-                  </button>
-                  <button v-else-if="row.status === 'canceled'" type="button" class="legacy-danger-button">
-                    <span aria-hidden="true">!</span> キャンセル済
-                  </button>
-                  <button v-else-if="row.status === 'served'" type="button" class="legacy-muted-button" disabled>
-                    配膳済
-                  </button>
-                  <button v-else type="button" class="legacy-complete-button" disabled>
-                    調理済
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="rows.length === 0">
-                <td :colspan="visibleColumnCount" class="legacy-no-data">データがありません</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="legacy-production-container">
+        <div class="history-wrapper mt-4">
+          <div class="history-table-container">
+            <div class="history-tbl-wrapper">
+              <div>
+                <table class="table legacy-order-table" :class="densityClass">
+                  <thead>
+                    <tr>
+                      <th
+                        v-for="column in displayColumns"
+                        :key="column.name"
+                        scope="col"
+                        :class="[{ active: column.name === sortField }, column.class]"
+                        @click="column.sortable && toggleSort(column.name)"
+                      >
+                        {{ column.display }}
+                        <span v-if="column.sortable" class="material-icons" aria-hidden="true">
+                          {{ column.name === sortField ? (sortDirection === 'desc' ? '▼' : '▲') : '' }}
+                        </span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in rows"
+                      :id="`order-item${row.id}`"
+                      :key="row.id"
+                      :class="rowClass(row)"
+                      :data-row-id="row.id"
+                    >
+                      <td class="exNo">{{ row.tableNo }}</td>
+                      <td class="text-bold exp-time">
+                        <span>{{ row.elapsedMinutes }} 分</span>
+                      </td>
+                      <td v-if="settings.showCourseName" class="text-link t-16 course-item-td">
+                        {{ row.course_name }}
+                      </td>
+                      <td class="product-desc">
+                        <h6>{{ row.name }}</h6>
+                        <div class="sub-desc">
+                          <p v-if="row.custom_content_name">{{ row.custom_content_name }}</p>
+                          <p v-if="row.memo">メモ：{{ row.memo }}</p>
+                        </div>
+                      </td>
+                      <td v-if="settings.showToppings" class="t-16 topping">
+                        <div v-if="row.toppings.length" class="text-left align-center">
+                          <template v-for="topping in row.toppings" :key="topping.id">
+                            - {{ topping.name }} x {{ topping.quantity * row.quantity }} <br />
+                          </template>
+                        </div>
+                      </td>
+                      <td class="text-bold order-quantity">{{ row.quantity }}</td>
+                      <td class="status" style="white-space: nowrap">
+                        <button
+                          v-if="row.status === 'started' && !completionStartedAt[row.id]"
+                          type="button"
+                          class="btn btn-primary pr-4 pl-4 legacy-primary-button"
+                          @click="toggleCompletion(row)"
+                        >
+                          調理済にする
+                        </button>
+                        <button
+                          v-else-if="row.status === 'started'"
+                          type="button"
+                          class="btn btn-primary pr-4 pl-4 custom-ladda-button danger-btn ladda-button legacy-primary-button"
+                          data-style="slide-left"
+                          data-loading
+                          @click="toggleCompletion(row)"
+                        >
+                          <span class="ladda-label">キャンセル</span>
+                          <span
+                            class="ladda-progress"
+                            :style="{ width: `${completionProgress(row.id) * 100}%` }"
+                          />
+                        </button>
+                        <template v-else-if="row.status === 'canceled'">
+                          <span class="alert-btn material-icons" aria-hidden="true">!</span>
+                          <button type="button" class="btn btn-primary pr-4 pl-4 danger-btn">
+                            キャンセル済
+                          </button>
+                        </template>
+                        <button v-else-if="row.status === 'served'" type="button" class="btn btn-gray-trans">
+                          配膳済
+                        </button>
+                        <button v-else type="button" class="btn btn-primary pr-4 pl-4 btn-primary-trans">
+                          調理済
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="rows.length === 0">
+                      <td :colspan="visibleColumnCount" class="legacy-no-data">データがありません</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="addmenu">
+                <a href="javascript:void(0)" @click.prevent="showManualAddNotice">
+                  <span class="material-icons" aria-hidden="true">＋</span> 手動追加
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <button class="legacy-manual-add" type="button" @click="showManualAddNotice">
-        <span aria-hidden="true">＋</span> 手動追加
-      </button>
     </div>
 
     <template #overlay>
