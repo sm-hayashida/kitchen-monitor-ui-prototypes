@@ -122,6 +122,30 @@ button {
   outline: 0;
 }
 
+.top-bar-comparison-button {
+  display: grid;
+  min-width: 74px;
+  height: 44px;
+  grid-template-columns: 18px auto;
+  place-items: center;
+  gap: 5px;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 8%);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.top-bar-comparison-button:hover,
+.top-bar-comparison-button:focus-visible {
+  background: #ffffff;
+  color: #c2410c;
+  outline: 0;
+}
+
 .top-bar-filter-button {
   width: 52px;
   grid-template-columns: 18px auto;
@@ -2247,14 +2271,13 @@ button {
   display: grid;
   width: 100%;
   min-height: 34px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 6px;
   border: 0;
   border-bottom: 1px solid #fed7aa;
   background: #fff7ed;
   color: #7c2d12;
-  cursor: pointer;
   padding: 5px 10px;
   text-align: left;
 }
@@ -2269,18 +2292,10 @@ button {
 }
 
 .order-card-memo-preview b {
-  display: -webkit-box;
-  overflow: hidden;
   font-size: 10px;
   font-weight: 800;
   line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.order-card-memo-preview:focus-visible {
-  outline: 3px solid #60a5fa;
-  outline-offset: -3px;
+  white-space: pre-wrap;
 }
 
 .department-settings-backdrop {
@@ -2291,6 +2306,228 @@ button {
   place-items: center;
   background: rgb(31 41 55 / 46%);
   padding: 48px 54px;
+}
+
+.comparison-settings-backdrop {
+  position: absolute;
+  z-index: 75;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(31 41 55 / 52%);
+  padding: 40px 54px;
+}
+
+.comparison-settings-panel {
+  display: grid;
+  width: min(760px, 100%);
+  max-height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgb(15 23 42 / 34%);
+}
+
+.comparison-settings-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #dfe3e8;
+  padding: 17px 22px 15px;
+}
+
+.comparison-settings-panel > header h2,
+.comparison-settings-panel > header p,
+.comparison-setting-heading h3,
+.comparison-setting-heading p,
+.comparison-current-standard h3,
+.comparison-current-standard p,
+.comparison-settings-panel > footer p {
+  margin: 0;
+}
+
+.comparison-settings-panel > header h2 {
+  color: #111827;
+  font-size: 22px;
+}
+
+.comparison-settings-panel > header p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.comparison-settings-panel > header button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.comparison-settings-panel > header button:hover,
+.comparison-settings-panel > header button:focus-visible {
+  background: #f1f5f9;
+  color: #1f2937;
+  outline: 3px solid #60a5fa;
+  outline-offset: -3px;
+}
+
+.comparison-settings-content {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.comparison-settings-content .view-mode-settings {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.comparison-column-setting {
+  border-bottom: 1px solid #dfe3e8;
+  background: #f8fafc;
+  padding: 16px 22px 18px;
+}
+
+.comparison-setting-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.comparison-setting-heading h3,
+.comparison-current-standard h3 {
+  color: #1f2937;
+  font-size: 15px;
+}
+
+.comparison-setting-heading p,
+.comparison-current-standard p {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.comparison-setting-heading > strong {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.comparison-column-choice {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.comparison-column-choice button {
+  min-width: 0;
+  height: 44px;
+  border: 0;
+  border-right: 1px solid #dfe3e8;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.comparison-column-choice button:last-child {
+  border-right: 0;
+}
+
+.comparison-column-choice button.active {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.comparison-column-choice button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid #60a5fa;
+  outline-offset: -3px;
+}
+
+.comparison-current-standard {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 22px;
+}
+
+.comparison-current-standard > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.comparison-current-standard > strong {
+  color: #15803d;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.comparison-settings-panel > footer {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid #dfe3e8;
+  padding: 10px 22px;
+}
+
+.comparison-settings-panel > footer p {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.comparison-settings-panel > footer button {
+  min-width: 96px;
+  height: 44px;
+  border: 1px solid #ea580c;
+  border-radius: 6px;
+  background: #f97316;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 18px;
+}
+
+.comparison-settings-panel > footer button:hover,
+.comparison-settings-panel > footer button:focus-visible {
+  background: #ea580c;
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
 }
 
 .department-settings-modal {
@@ -2790,6 +3027,18 @@ button {
   z-index: 2;
 }
 
+.order-view-item.row-action-available {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.order-view-item.row-action-available:hover,
+.order-view-item.row-action-available:focus-visible {
+  background: #fff7ed;
+  outline: 3px solid #fb923c;
+  outline-offset: -3px;
+}
+
 .order-view-item.fully-processed .order-item-description {
   opacity: 0.5;
 }
@@ -3069,7 +3318,7 @@ button {
   gap: 4px;
 }
 
-.order-item-detail-trigger {
+.order-item-row-complete {
   width: 100%;
   border: 0;
   background: transparent;
@@ -3078,33 +3327,30 @@ button {
   text-align: left;
 }
 
-.order-item-detail-trigger:disabled {
+.order-item-row-complete:disabled {
   cursor: default;
 }
 
-.order-item-detail-trigger:focus-visible {
+.order-item-row-complete:focus-visible {
   border-radius: 4px;
   outline: 3px solid #60a5fa;
   outline-offset: 2px;
 }
 
 .order-item-description b {
-  display: -webkit-box;
-  overflow: hidden;
   color: #1f2937;
   font-size: 14px;
   line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .order-item-description span {
-  overflow: hidden;
+  overflow: visible;
   color: #64748b;
   font-size: 10px;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .order-item-description .order-item-memo {
@@ -3113,17 +3359,19 @@ button {
 
 .order-item-description .order-item-options,
 .order-item-description .order-item-memo {
-  display: -webkit-box;
   line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
 }
 
 .order-item-description .order-item-options {
   display: flex;
   min-width: 0;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
+}
+
+.order-item-description .order-item-memo {
+  display: block;
 }
 
 .order-item-description .order-item-option-chip {
@@ -3660,6 +3908,27 @@ button {
   padding: 0 3px;
 }
 
+.table-order-memo-inline {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+  margin: 0;
+  border-bottom: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #7c2d12;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 5px 9px;
+  white-space: pre-wrap;
+}
+
+.table-order-memo-inline strong {
+  color: #c2410c;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
 .table-order-divider b {
   color: #64748b;
 }
@@ -4022,8 +4291,8 @@ button {
 
 .order-view-item .order-item-description .order-item-options,
 .order-view-item .order-item-description .order-item-memo {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 @media (max-width: 1100px) {

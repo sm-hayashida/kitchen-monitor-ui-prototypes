@@ -1,4 +1,7 @@
-import { estimateOrderItemHeight } from './orderCardSegments.js';
+import {
+  estimateOrderItemHeight,
+  estimateOrderMemoHeight,
+} from './orderCardSegments.js';
 
 const DEFAULT_TABLE_CONTENT_BUDGET = 320;
 const TABLE_CARD_HEADER_HEIGHT = 43;
@@ -144,7 +147,10 @@ function estimateEntriesHeight(entries) {
   let previousOrderId = null;
 
   return entries.reduce((height, { order, orderItem }) => {
-    const dividerHeight = order.id === previousOrderId ? 0 : ORDER_GROUP_HEADER_HEIGHT;
+    const dividerHeight =
+      order.id === previousOrderId
+        ? 0
+        : ORDER_GROUP_HEADER_HEIGHT + estimateOrderMemoHeight(order.order_memo);
     previousOrderId = order.id;
     return height + dividerHeight + estimateOrderItemHeight(orderItem);
   }, 0);
@@ -156,7 +162,10 @@ function takeEntriesWithinHeight(entries, contentBudget) {
   let previousOrderId = null;
 
   for (const entry of entries) {
-    const dividerHeight = entry.order.id === previousOrderId ? 0 : ORDER_GROUP_HEADER_HEIGHT;
+    const dividerHeight =
+      entry.order.id === previousOrderId
+        ? 0
+        : ORDER_GROUP_HEADER_HEIGHT + estimateOrderMemoHeight(entry.order.order_memo);
     const additionalHeight = dividerHeight + estimateOrderItemHeight(entry.orderItem);
 
     if (chunk.length > 0 && chunkHeight + additionalHeight > contentBudget) {
@@ -232,6 +241,7 @@ export function estimateTableCardHeight(table) {
     (height, orderGroup) =>
       height +
       ORDER_GROUP_HEADER_HEIGHT +
+      estimateOrderMemoHeight(orderGroup.order_memo) +
       orderGroup.items.reduce(
         (itemHeight, orderItem) => itemHeight + estimateOrderItemHeight(orderItem),
         0,

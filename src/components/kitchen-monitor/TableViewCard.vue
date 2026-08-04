@@ -52,9 +52,9 @@ const props = defineProps({
 
 defineEmits([
   'cancel-item-completion',
+  'complete-item',
   'move-table',
   'open-aggregate',
-  'open-item-detail',
   'set-item-processed-quantity',
   'toggle-item-action',
   'toggle-pinned',
@@ -176,6 +176,10 @@ function orderGroupTiming(orderGroup) {
           </em>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
+        <p v-if="orderGroup.order_memo" class="table-order-memo-inline">
+          <strong>注文メモ</strong>
+          <span>{{ orderGroup.order_memo }}</span>
+        </p>
         <TransitionGroup tag="div" class="table-order-items" name="table-item">
           <OrderItemRow
             v-for="orderItem in orderGroup.items"
@@ -188,8 +192,8 @@ function orderGroupTiming(orderGroup) {
             :order-item="orderItem"
             :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
             @cancel-item-completion="$emit('cancel-item-completion', $event)"
+            @complete-item="$emit('complete-item', $event)"
             @open-aggregate="$emit('open-aggregate', $event)"
-            @open-item-detail="$emit('open-item-detail', $event)"
             @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
             @toggle-item-action="$emit('toggle-item-action', $event)"
           />

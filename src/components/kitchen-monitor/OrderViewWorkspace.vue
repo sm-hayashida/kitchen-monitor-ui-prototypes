@@ -10,7 +10,6 @@ import { useResponsiveColumnLayout } from '../../features/kitchen-monitor/useRes
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
-import OrderItemDetailPopover from './OrderItemDetailPopover.vue';
 import OrderViewCard from './OrderViewCard.vue';
 import ProductAggregateModal from './ProductAggregateModal.vue';
 
@@ -43,19 +42,19 @@ const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(l
 const {
   activeItemActionId,
   aggregateByKey,
+  cancelItemCompletion,
   closeAggregate,
-  closeItemDetail,
   closeItemAction,
+  completeItemRemaining,
   completionStartedAt,
   completionWindowMs,
+  itemCompletionStartedAt,
+  itemCompletionWindowMs,
   nowMs,
   openAggregate,
-  openItemDetail,
   processedUnitNumbersByItemId,
   setItemProcessedQuantity,
   selectedAggregate,
-  selectedItemAnchor,
-  selectedItemDetail,
   toast,
   toggleItemAction,
   toggleOrderCompletion,
@@ -184,11 +183,14 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
                 :aggregate-by-key="aggregateByKey"
                 :completion-started-at="completionStartedAt[order.source_order_id ?? order.id]"
                 :completion-window-ms="completionWindowMs"
+                :item-completion-started-at="itemCompletionStartedAt"
+                :item-completion-window-ms="itemCompletionWindowMs"
                 :order="order"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
+                @cancel-item-completion="cancelItemCompletion"
+                @complete-item="completeItemRemaining"
                 @complete-order="toggleOrderCompletion"
                 @open-aggregate="openAggregate"
-                @open-item-detail="openItemDetail"
                 @set-item-processed-quantity="setItemProcessedQuantity"
                 @toggle-item-action="toggleItemAction"
               />
@@ -214,11 +216,14 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
               :aggregate-by-key="aggregateByKey"
               :completion-started-at="completionStartedAt[order.source_order_id ?? order.id]"
               :completion-window-ms="completionWindowMs"
+              :item-completion-started-at="itemCompletionStartedAt"
+              :item-completion-window-ms="itemCompletionWindowMs"
               :order="order"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
+              @cancel-item-completion="cancelItemCompletion"
+              @complete-item="completeItemRemaining"
               @complete-order="toggleOrderCompletion"
               @open-aggregate="openAggregate"
-              @open-item-detail="openItemDetail"
               @set-item-processed-quantity="setItemProcessedQuantity"
               @toggle-item-action="toggleItemAction"
             />
@@ -275,14 +280,6 @@ function saveDepartmentSettings(departmentIds, preferences = {}) {
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
       @close="closeAggregate"
-    />
-
-    <OrderItemDetailPopover
-      v-if="selectedItemDetail && selectedItemAnchor"
-      :anchor-rect="selectedItemAnchor"
-      :detail="selectedItemDetail"
-      @close="closeItemDetail"
-      @set-item-processed-quantity="setItemProcessedQuantity"
     />
 
     <template #overlay>

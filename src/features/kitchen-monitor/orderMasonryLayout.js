@@ -1,4 +1,7 @@
-import { estimateOrderItemHeight } from './orderCardSegments.js';
+import {
+  estimateOrderItemHeight,
+  estimateOrderMemoHeight,
+} from './orderCardSegments.js';
 
 const CARD_GAP = 14;
 const COMPACT_HEADER_HEIGHT = 37;
@@ -17,6 +20,7 @@ export function estimateOrderCardHeight(order) {
   return (
     itemHeight +
     (isContinuation ? 0 : COMPACT_HEADER_HEIGHT) +
+    (isContinuation ? 0 : estimateOrderMemoHeight(order.order_memo)) +
     (isLastSegment ? COMPLETE_FOOTER_HEIGHT : 0) +
     CARD_BORDER_HEIGHT +
     CARD_MEASUREMENT_TOLERANCE

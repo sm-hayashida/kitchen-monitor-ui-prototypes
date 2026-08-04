@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import CategoryRail from './CategoryRail.vue';
+import ComparisonSettingsPanel from './ComparisonSettingsPanel.vue';
 import OrderDetailDrawer from './OrderDetailDrawer.vue';
 import TopBar from './TopBar.vue';
 import ViewSettingsModal from './ViewSettingsModal.vue';
@@ -62,6 +63,7 @@ const emit = defineEmits([
 ]);
 
 const isViewSettingsOpen = ref(false);
+const isComparisonSettingsOpen = ref(false);
 
 function openSettings() {
   if (props.externalSettings) {
@@ -73,6 +75,7 @@ function openSettings() {
 }
 
 function switchView(nextView) {
+  isComparisonSettingsOpen.value = false;
   isViewSettingsOpen.value = false;
   emit('switch-view', nextView);
 }
@@ -83,6 +86,7 @@ function switchView(nextView) {
     <section class="monitor-frame">
       <TopBar
         :active-view="activeView"
+        @open-comparison="isComparisonSettingsOpen = true"
         @open-settings="openSettings"
         @switch-view="switchView"
       >
@@ -126,6 +130,13 @@ function switchView(nextView) {
       </div>
 
       <slot name="overlay" />
+
+      <ComparisonSettingsPanel
+        v-if="isComparisonSettingsOpen"
+        :active-view="activeView"
+        @close="isComparisonSettingsOpen = false"
+        @switch-view="switchView"
+      />
 
       <ViewSettingsModal
         v-if="isViewSettingsOpen"

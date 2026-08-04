@@ -22,6 +22,14 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+  itemCompletionStartedAt: {
+    type: Object,
+    required: true,
+  },
+  itemCompletionWindowMs: {
+    type: Number,
+    required: true,
+  },
   order: {
     type: Object,
     required: true,
@@ -33,9 +41,10 @@ const props = defineProps({
 });
 
 defineEmits([
+  'cancel-item-completion',
+  'complete-item',
   'complete-order',
   'open-aggregate',
-  'open-item-detail',
   'set-item-processed-quantity',
   'toggle-item-action',
 ]);
@@ -95,19 +104,13 @@ const hasOpenItemAction = computed(() =>
       <small>{{ sourceOrderId }}</small>
     </header>
 
-    <button
+    <div
       v-if="!isContinuation && order.order_memo"
       class="order-card-memo-preview"
-      type="button"
-      @click.stop="$emit('open-item-detail', {
-        orderItemId: order.items[0]?.order_item_id,
-        anchorRect: $event.currentTarget.getBoundingClientRect(),
-      })"
     >
       <span>注文メモ</span>
       <b>{{ order.order_memo }}</b>
-      <em>全文</em>
-    </button>
+    </div>
 
     <div class="order-view-items">
       <OrderItemRow
@@ -115,10 +118,13 @@ const hasOpenItemAction = computed(() =>
         :key="orderItem.order_item_id"
         :active-item-action-id="activeItemActionId"
         :aggregate-by-key="aggregateByKey"
+        :item-completion-started-at="itemCompletionStartedAt[orderItem.order_item_id]"
+        :item-completion-window-ms="itemCompletionWindowMs"
         :order-item="orderItem"
         :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
+        @cancel-item-completion="$emit('cancel-item-completion', $event)"
+        @complete-item="$emit('complete-item', $event)"
         @open-aggregate="$emit('open-aggregate', $event)"
-        @open-item-detail="$emit('open-item-detail', $event)"
         @set-item-processed-quantity="$emit('set-item-processed-quantity', $event)"
         @toggle-item-action="$emit('toggle-item-action', $event)"
       />

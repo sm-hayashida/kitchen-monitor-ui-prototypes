@@ -2,9 +2,9 @@ import { ref } from 'vue';
 
 export const columnCountPreferenceOptions = Object.freeze([
   { value: 'auto', label: '自動' },
-  { value: '1', label: '1列' },
   { value: '2', label: '2列' },
   { value: '3', label: '3列' },
+  { value: '4', label: '4列' },
 ]);
 
 const columnCountPreference = ref('auto');
@@ -15,7 +15,7 @@ function normalizeColumnCountPreference(value) {
   }
 
   const numericValue = Number(value);
-  return Number.isInteger(numericValue) && numericValue >= 1 && numericValue <= 3
+  return Number.isInteger(numericValue) && numericValue >= 2 && numericValue <= 4
     ? String(numericValue)
     : 'auto';
 }

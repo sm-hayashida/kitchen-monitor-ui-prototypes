@@ -16,7 +16,7 @@ Kitchen Monitor の注文別表示とテーブル別表示を比較するため�
 
 未指定URLや旧URLは`#order-n-scroll`へフォールバックします。
 
-数量は「対象商品の残数 / 全注文の同一商品未調理合計」で表示します。設定では表示部門、テーブルグループ化、比較レイアウト、カード列数を変更できます。
+数量は「対象商品の残数 / 全注文の同一商品未調理合計」で表示します。ヘッダーの「比較」から比較レイアウトとカード列数、歯車の設定から表示部門とテーブルグループ化を変更できます。
 
 ## ローカル起動
 
@@ -39,9 +39,9 @@ npm run preview
 ## 主なファイル
 
 - `src/pages/`: 比較画面単位のページコンポーネント
-- `src/components/kitchen-monitor/`: 注文・テーブルカード、設定、詳細、横スクロール
+- `src/components/kitchen-monitor/`: 注文・テーブルカード、設定、数量変更、横スクロール
 - `src/features/kitchen-monitor/orderViewMockData.js`: 注文別表示用の固定注文データ
 - `src/features/kitchen-monitor/useOrderViewMock.js`: 商品横断集計、完了、取消のモック状態
 - `src/features/kitchen-monitor/useResponsiveColumnLayout.js`: 利用可能幅に応じた列数計算
-- `src/features/kitchen-monitor/useColumnLayoutPreference.js`: 自動・1〜3列の表示設定
+- `src/features/kitchen-monitor/useColumnLayoutPreference.js`: 自動・2〜4列の表示設定
 - `src/style.css`: iPad 横画面向けの共通スタイル

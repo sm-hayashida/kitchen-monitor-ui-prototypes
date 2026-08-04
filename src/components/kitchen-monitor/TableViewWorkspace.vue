@@ -21,7 +21,6 @@ import { useTableLayoutPreferences } from '../../features/kitchen-monitor/useTab
 import HorizontalColumnScroller from './HorizontalColumnScroller.vue';
 import KitchenMonitorShell from './KitchenMonitorShell.vue';
 import OrderDepartmentSettingsModal from './OrderDepartmentSettingsModal.vue';
-import OrderItemDetailPopover from './OrderItemDetailPopover.vue';
 import ProductAggregateModal from './ProductAggregateModal.vue';
 import TableViewCard from './TableViewCard.vue';
 
@@ -56,21 +55,18 @@ const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(l
 const {
   activeItemActionId,
   aggregateByKey,
-  cancelTableItemCompletion,
+  cancelItemCompletion,
   closeAggregate,
-  closeItemDetail,
   closeItemAction,
+  completeItemRemaining,
   hiddenCompletedItemIds,
   itemCompletionStartedAt,
   itemCompletionWindowMs,
   nowMs,
   openAggregate,
-  openItemDetail,
   processedUnitNumbersByItemId,
   setItemProcessedQuantity,
   selectedAggregate,
-  selectedItemAnchor,
-  selectedItemDetail,
   toast,
   toggleItemAction,
   visibleOrders,
@@ -252,6 +248,10 @@ function setTableItemProcessedQuantity(payload) {
   setItemProcessedQuantity({ ...payload, hideWhenComplete: true });
 }
 
+function completeTableItemRemaining(orderItemId) {
+  completeItemRemaining(orderItemId, { hideWhenComplete: true });
+}
+
 function canMoveTable(tableId, direction) {
   const currentIndex = orderedTableIds.value.indexOf(tableId);
   const targetTableId = orderedTableIds.value[currentIndex + direction];
@@ -415,10 +415,10 @@ function syncActiveTableCategory(columnIndex) {
                 :item-completion-window-ms="itemCompletionWindowMs"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 :table="table"
-                @cancel-item-completion="cancelTableItemCompletion"
+                @cancel-item-completion="cancelItemCompletion"
+                @complete-item="completeTableItemRemaining"
                 @move-table="moveTableInOrder(table.source_table_id, $event)"
                 @open-aggregate="openAggregate"
-                @open-item-detail="openItemDetail"
                 @set-item-processed-quantity="setTableItemProcessedQuantity"
                 @toggle-item-action="toggleItemAction"
                 @toggle-pinned="toggleTablePinned"
@@ -450,10 +450,10 @@ function syncActiveTableCategory(columnIndex) {
               :item-completion-window-ms="itemCompletionWindowMs"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               :table="table"
-              @cancel-item-completion="cancelTableItemCompletion"
+              @cancel-item-completion="cancelItemCompletion"
+              @complete-item="completeTableItemRemaining"
               @move-table="moveTableInOrder(table.source_table_id, $event)"
               @open-aggregate="openAggregate"
-              @open-item-detail="openItemDetail"
               @set-item-processed-quantity="setTableItemProcessedQuantity"
               @toggle-item-action="toggleItemAction"
               @toggle-pinned="toggleTablePinned"
@@ -511,15 +511,6 @@ function syncActiveTableCategory(columnIndex) {
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
       @close="closeAggregate"
-    />
-
-    <OrderItemDetailPopover
-      v-if="selectedItemDetail && selectedItemAnchor"
-      :anchor-rect="selectedItemAnchor"
-      :detail="selectedItemDetail"
-      hide-when-complete
-      @close="closeItemDetail"
-      @set-item-processed-quantity="setTableItemProcessedQuantity"
     />
 
     <template #overlay>

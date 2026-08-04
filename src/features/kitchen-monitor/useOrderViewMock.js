@@ -15,8 +15,6 @@ export function useOrderViewMock() {
   const orders = ref(structuredClone(orderViewMockOrders));
   const selectedCategoryId = ref('all');
   const selectedAggregateKey = ref(null);
-  const selectedItemId = ref(null);
-  const selectedItemAnchor = ref(null);
   const activeItemActionId = ref(null);
   const completionStartedAt = ref({});
   const itemCompletionStartedAt = ref({});
@@ -112,61 +110,17 @@ export function useOrderViewMock() {
   const selectedAggregate = computed(
     () => aggregateByKey.value[selectedAggregateKey.value] ?? null,
   );
-  const selectedItemDetail = computed(() => {
-    if (!selectedItemId.value) {
-      return null;
-    }
-
-    for (const order of orders.value) {
-      const orderItem = order.items.find(
-        (candidate) => candidate.order_item_id === selectedItemId.value,
-      );
-
-      if (orderItem) {
-        const aggregateKey = getOrderItemAggregateKey(orderItem);
-        return {
-          aggregate: aggregateByKey.value[aggregateKey] ?? null,
-          order,
-          orderItem,
-          processedCount:
-            processedUnitNumbersByItemId.value[orderItem.order_item_id]?.length ?? 0,
-        };
-      }
-    }
-
-    return null;
-  });
-
   function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId;
   }
 
   function openAggregate(aggregateKey) {
     closeItemAction();
-    closeItemDetail();
     selectedAggregateKey.value = aggregateKey;
   }
 
   function closeAggregate() {
     selectedAggregateKey.value = null;
-  }
-
-  function openItemDetail({ orderItemId, anchorRect }) {
-    closeItemAction();
-    closeAggregate();
-
-    if (selectedItemId.value === orderItemId) {
-      closeItemDetail();
-      return;
-    }
-
-    selectedItemId.value = orderItemId;
-    selectedItemAnchor.value = anchorRect;
-  }
-
-  function closeItemDetail() {
-    selectedItemId.value = null;
-    selectedItemAnchor.value = null;
   }
 
   function toggleItemAction(orderItemId) {
@@ -224,8 +178,9 @@ export function useOrderViewMock() {
     }
 
     const previousQuantity = processedUnitNumbersByItemId.value[orderItemId]?.length ?? 0;
-    const reachesHiddenCompletion = hideWhenComplete && nextQuantity === orderItem.quantity;
-    if (!keepOpen || reachesHiddenCompletion) {
+    const reachesCompletion =
+      nextQuantity === orderItem.quantity && previousQuantity < orderItem.quantity;
+    if (!keepOpen || reachesCompletion) {
       closeItemAction();
     }
 
@@ -239,7 +194,7 @@ export function useOrderViewMock() {
       [orderItemId]: Array.from({ length: nextQuantity }, (_, index) => index + 1),
     };
 
-    if (hideWhenComplete && nextQuantity === orderItem.quantity) {
+    if (reachesCompletion) {
       itemCompletionStartedAt.value = {
         ...itemCompletionStartedAt.value,
         [orderItemId]: Date.now(),
@@ -250,9 +205,16 @@ export function useOrderViewMock() {
       };
       itemCompletionTimers.set(
         orderItemId,
-        window.setTimeout(() => finishTableItem(orderItemId), itemCompletionWindowMs),
+        window.setTimeout(
+          () => (hideWhenComplete ? finishTableItem(orderItemId) : finishItemCompletion(orderItemId)),
+          itemCompletionWindowMs,
+        ),
       );
-      showToast(`${orderItem.name}は5秒後にテーブル一覧から消えます`);
+      showToast(
+        hideWhenComplete
+          ? `${orderItem.name}は5秒後にテーブル一覧から消えます`
+          : `5秒以内なら${orderItem.name}の完了を取り消せます`,
+      );
     } else if (!keepOpen) {
       showToast(
         nextQuantity < previousQuantity
@@ -266,7 +228,7 @@ export function useOrderViewMock() {
     }
   }
 
-  function cancelTableItemCompletion(orderItemId) {
+  function cancelItemCompletion(orderItemId) {
     const previousQuantity = itemCompletionPreviousQuantityByItemId.value[orderItemId];
 
     if (!Number.isInteger(previousQuantity)) {
@@ -298,12 +260,31 @@ export function useOrderViewMock() {
     if (activeItemActionId.value === orderItemId) {
       closeItemAction();
     }
-    if (selectedItemId.value === orderItemId) {
-      closeItemDetail();
-    }
     if (orderItem) {
       showToast(`${orderItem.name}をテーブル一覧から非表示にしました`);
     }
+  }
+
+  function finishItemCompletion(orderItemId) {
+    const orderItem = findOrderItem(orderItemId);
+    clearItemCompletion(orderItemId);
+    if (orderItem) {
+      showToast(`${orderItem.name}を調理済みにしました`);
+    }
+  }
+
+  function completeItemRemaining(orderItemId, { hideWhenComplete = false } = {}) {
+    const orderItem = findOrderItem(orderItemId);
+
+    if (!orderItem) {
+      return;
+    }
+
+    setItemProcessedQuantity({
+      orderItemId,
+      processedQuantity: orderItem.quantity,
+      hideWhenComplete,
+    });
   }
 
   function toggleOrderCompletion(orderId) {
@@ -346,9 +327,6 @@ export function useOrderViewMock() {
           ([orderItemId]) => !finishedItemIds.has(orderItemId),
         ),
       );
-      if (finishedItemIds.has(selectedItemId.value)) {
-        closeItemDetail();
-      }
     }
     showToast('注文を調理済みにしました');
 
@@ -375,11 +353,11 @@ export function useOrderViewMock() {
   return {
     activeItemActionId,
     aggregateByKey,
-    cancelTableItemCompletion,
+    cancelItemCompletion,
     categories,
     closeAggregate,
-    closeItemDetail,
     closeItemAction,
+    completeItemRemaining,
     completionStartedAt,
     completionWindowMs: orderCompletionWindowMs,
     hiddenCompletedItemIds,
@@ -387,12 +365,9 @@ export function useOrderViewMock() {
     itemCompletionWindowMs,
     nowMs,
     openAggregate,
-    openItemDetail,
     processedUnitNumbersByItemId,
     selectCategory,
     selectedAggregate,
-    selectedItemAnchor,
-    selectedItemDetail,
     selectedCategoryId,
     setItemProcessedQuantity,
     toast,

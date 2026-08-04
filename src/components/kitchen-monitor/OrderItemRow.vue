@@ -70,30 +70,25 @@ function setProcessedQuantity(processedQuantity, keepOpen = false) {
   };
 }
 
-function openItemDetail(event) {
-  const anchor = event.currentTarget.closest('.order-view-item')?.getBoundingClientRect();
+const canCompleteRow = computed(
+  () => !props.interactionsDisabled && !props.itemCompletionStartedAt && remainingCount.value > 0,
+);
+const rowAriaLabel = computed(
+  () => `${displayName.value}の残り${remainingCount.value}個をすべて調理済みにする`,
+);
 
-  if (!anchor) {
+function completeRow() {
+  if (!canCompleteRow.value) {
     return;
   }
 
-  emit('open-item-detail', {
-    orderItemId: props.orderItem.order_item_id,
-    anchorRect: {
-      top: anchor.top,
-      right: anchor.right,
-      bottom: anchor.bottom,
-      left: anchor.left,
-      width: anchor.width,
-      height: anchor.height,
-    },
-  });
+  emit('complete-item', props.orderItem.order_item_id);
 }
 
 const emit = defineEmits([
   'cancel-item-completion',
+  'complete-item',
   'open-aggregate',
-  'open-item-detail',
   'set-item-processed-quantity',
   'toggle-item-action',
 ]);
@@ -102,11 +97,14 @@ const emit = defineEmits([
 <template>
   <div
     class="order-view-item"
+    :data-order-item-id="orderItem.order_item_id"
     :class="{
       'action-open': activeItemActionId === orderItem.order_item_id,
       'fully-processed': processedCount === orderItem.quantity,
       'completion-pending': itemCompletionStartedAt,
+      'row-action-available': canCompleteRow,
     }"
+    @click="completeRow"
   >
     <button
       class="order-item-quantity"
@@ -120,11 +118,11 @@ const emit = defineEmits([
       <span class="quantity-sub-label">/{{ aggregateRemainingCount }}</span>
     </button>
     <button
-      class="order-item-description order-item-detail-trigger"
+      class="order-item-description order-item-row-complete"
       type="button"
-      :disabled="interactionsDisabled"
-      :aria-label="`${displayName}の詳細を表示`"
-      @click.stop="openItemDetail"
+      :disabled="!canCompleteRow"
+      :aria-label="rowAriaLabel"
+      @click.stop="completeRow"
     >
       <b>{{ displayName }}</b>
       <span
@@ -222,7 +220,7 @@ const emit = defineEmits([
       :aria-label="`${displayName}の完了を取り消す`"
       @click.stop="$emit('cancel-item-completion', orderItem.order_item_id)"
     >
-      <span>↺ 取消</span>
+      <span>↺ 再タップで取消</span>
     </button>
   </div>
 </template>

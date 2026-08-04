@@ -89,7 +89,7 @@ function save() {
         <section class="column-count-setting">
           <div>
             <strong>カード列数</strong>
-            <span>自動は画面幅に合わせて1〜3列で調整します</span>
+            <span>自動は画面幅に合わせて2〜4列で調整します</span>
           </div>
           <div class="column-count-choice" role="group" aria-label="カード列数">
             <button

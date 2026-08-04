@@ -1,5 +1,5 @@
 <script setup>
-import { Settings, Volume2, VolumeX } from '@lucide/vue';
+import { SlidersHorizontal, Settings, Volume2, VolumeX } from '@lucide/vue';
 import { ref } from 'vue';
 import {
   resolveViewModeGroup,
@@ -13,7 +13,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['open-settings', 'switch-view']);
+const emit = defineEmits(['open-comparison', 'open-settings', 'switch-view']);
 const soundEnabled = ref(window.localStorage.getItem('kitchen-monitor-sound') !== 'off');
 
 function switchView(viewId) {
@@ -42,6 +42,16 @@ function toggleSound() {
 
     <div class="top-bar-actions">
       <slot name="actions" />
+      <button
+        class="top-bar-comparison-button"
+        type="button"
+        aria-label="比較設定を開く"
+        title="比較設定"
+        @click="$emit('open-comparison')"
+      >
+        <SlidersHorizontal :size="17" :stroke-width="2.2" aria-hidden="true" />
+        <span>比較</span>
+      </button>
       <button
         class="top-bar-icon-button"
         type="button"

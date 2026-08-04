@@ -6,6 +6,8 @@ import {
 const ITEM_HEIGHT = 43;
 const ORDER_CARD_CHROME_HEIGHT = 73;
 const ORDER_MEMO_PREVIEW_HEIGHT = 34;
+const ESTIMATED_NAME_CHARACTERS_PER_LINE = 16;
+const ESTIMATED_DETAIL_CHARACTERS_PER_LINE = 20;
 
 const ITEM_BUDGET_BY_LAYOUT = {
   'n-paged': 380,
@@ -15,14 +17,38 @@ const ITEM_BUDGET_BY_LAYOUT = {
 export function estimateOrderItemHeight(orderItem) {
   const displayName = getOrderItemDisplayName(orderItem);
   const inlineDetails = getOrderItemInlineDetails(orderItem);
-  const hasOptionLine = Boolean(
-    orderItem.course_name || inlineDetails.visibleToppings.length,
+  const nameLineCount = Math.max(
+    1,
+    Math.ceil(displayName.length / ESTIMATED_NAME_CHARACTERS_PER_LINE),
   );
-  const extraNameHeight = displayName.length > 16 ? 15 : 0;
-  const detailLineCount = Number(hasOptionLine) + Number(Boolean(inlineDetails.memo));
+  const optionCharacterCount =
+    (orderItem.course_name?.length ?? 0) +
+    inlineDetails.visibleToppings.reduce(
+      (length, topping) => length + topping.name.length + 3,
+      0,
+    );
+  const optionLineCount = optionCharacterCount
+    ? Math.ceil(optionCharacterCount / ESTIMATED_DETAIL_CHARACTERS_PER_LINE)
+    : 0;
+  const memoLineCount = inlineDetails.memo
+    ? Math.ceil(inlineDetails.memo.length / ESTIMATED_DETAIL_CHARACTERS_PER_LINE)
+    : 0;
+  const extraNameHeight = (nameLineCount - 1) * 15;
+  const detailLineCount = optionLineCount + memoLineCount;
   const extraDetailHeight = Math.max(0, detailLineCount - 1) * 13;
 
   return ITEM_HEIGHT + extraNameHeight + extraDetailHeight;
+}
+
+export function estimateOrderMemoHeight(orderMemo) {
+  if (!orderMemo) {
+    return 0;
+  }
+
+  return Math.max(
+    ORDER_MEMO_PREVIEW_HEIGHT,
+    10 + Math.ceil(orderMemo.length / 26) * 14,
+  );
 }
 
 function splitItemsByHeight(items, itemBudget) {
@@ -65,7 +91,7 @@ export function createOrderCardSegments(orders, layout, { maxCardHeight } = {}) 
   return orders.flatMap((order) => {
     const orderItemBudget = Math.max(
       ITEM_HEIGHT,
-      itemBudget - (order.order_memo ? ORDER_MEMO_PREVIEW_HEIGHT : 0),
+      itemBudget - estimateOrderMemoHeight(order.order_memo),
     );
     const chunks = splitItemsByHeight(order.items, orderItemBudget);
 

@@ -6,7 +6,8 @@ export function useResponsiveColumnLayout(
     columnGap = 14,
     contentInset = 0,
     fallbackColumnHeight = 410,
-    maxColumnCount = 3,
+    maxColumnCount = 4,
+    minColumnCount = 2,
     minColumnHeight = 260,
     minColumnWidth = 290,
     preferredColumnCount = 'auto',
@@ -57,13 +58,13 @@ export function useResponsiveColumnLayout(
       const requestedColumnCount = Number(unref(preferredColumnCount));
       const hasRequestedColumnCount =
         Number.isInteger(requestedColumnCount) &&
-        requestedColumnCount >= 1 &&
+        requestedColumnCount >= minColumnCount &&
         requestedColumnCount <= maxColumnCount;
 
       columnHeight.value = measuredHeight > 0 ? measuredHeight : minColumnHeight;
       columnCount.value = hasRequestedColumnCount
         ? requestedColumnCount
-        : Math.min(maxColumnCount, Math.max(1, measuredColumnCount));
+        : Math.min(maxColumnCount, Math.max(minColumnCount, measuredColumnCount));
       isLayoutReady.value = true;
     });
   }

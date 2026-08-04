@@ -10,6 +10,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  comparisonExpanded: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['switch-view']);
@@ -38,7 +42,7 @@ const activeGroupId = computed(
       </button>
     </div>
 
-    <details class="layout-comparison-settings">
+    <details class="layout-comparison-settings" :open="comparisonExpanded">
       <summary>レイアウト比較</summary>
       <div class="layout-comparison-groups">
         <section v-for="group in viewModeGroups" :key="group.id">
