@@ -140,6 +140,7 @@ export const orderViewMockOrders = [
       course_name: 'Bコース',
     }),
   ], {
+    joined_table_names: ['T14', 'T15', 'T16', 'T17', 'T18'],
     order_memo:
       '5名のうち2名は子どもです。Aコースを先に開始し、Bコースはホールの合図後にお願いします。',
     order_source: 'staff',
@@ -156,6 +157,9 @@ function createOrder(orderId, tableNo, elapsedMinutes, guestCount, items, metada
     table_info_id: table?.tableInfoId ?? tableNo,
     table_no: tableNo,
     table_name: table?.tableName ?? tableNo,
+    joined_table_names: [
+      ...new Set(metadata.joined_table_names ?? [table?.tableName ?? tableNo]),
+    ],
     table_category: table?.tableCategory ?? '未分類',
     table_sort: table?.sort ?? Number.MAX_SAFE_INTEGER,
     ordered_elapsed_minutes: elapsedMinutes,

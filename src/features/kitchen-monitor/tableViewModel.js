@@ -16,6 +16,13 @@ function tableNumber(tableNo) {
   return Number.parseInt(tableNo.replace(/\D/g, ''), 10) || Number.MAX_SAFE_INTEGER;
 }
 
+function joinedTableNames(order) {
+  return [...new Set([
+    order.table_name ?? order.table_no,
+    ...(Array.isArray(order.joined_table_names) ? order.joined_table_names : []),
+  ].filter(Boolean))];
+}
+
 export function createTableGroups(orders) {
   const groupsByTable = new Map();
 
@@ -26,6 +33,7 @@ export function createTableGroups(orders) {
       table_info_id: order.table_info_id ?? order.table_no,
       table_no: order.table_no,
       table_name: order.table_name ?? order.table_no,
+      joined_table_names: joinedTableNames(order),
       table_category: order.table_category ?? '未分類',
       table_sort: order.table_sort ?? Number.MAX_SAFE_INTEGER,
       orders: [],
@@ -36,6 +44,10 @@ export function createTableGroups(orders) {
     };
 
     table.orders.push(order);
+    table.joined_table_names = [...new Set([
+      ...table.joined_table_names,
+      ...joinedTableNames(order),
+    ])];
     table.earliest_elapsed_minutes = Math.max(
       table.earliest_elapsed_minutes,
       order.ordered_elapsed_minutes,

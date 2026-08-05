@@ -92,6 +92,7 @@ const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(l
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   preferredColumnCount: columnCountPreference,
 });
+const visibleJoinedTableNameLimit = computed(() => columnCount.value === 4 ? 2 : 3);
 
 const {
   activeItemActionId,
@@ -478,6 +479,7 @@ function syncActiveTableCategory(columnIndex) {
                 :item-completion-window-ms="itemCompletionWindowMs"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
                 :table="table"
+                :table-name-limit="visibleJoinedTableNameLimit"
                 @cancel-item-completion="cancelItemCompletion"
                 @complete-item="completeTableItemRemaining"
                 @move-table="moveTableInOrder(table.source_table_id, $event)"
@@ -513,6 +515,7 @@ function syncActiveTableCategory(columnIndex) {
               :item-completion-window-ms="itemCompletionWindowMs"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
               :table="table"
+              :table-name-limit="visibleJoinedTableNameLimit"
               @cancel-item-completion="cancelItemCompletion"
               @complete-item="completeTableItemRemaining"
               @move-table="moveTableInOrder(table.source_table_id, $event)"
