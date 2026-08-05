@@ -187,7 +187,10 @@ function orderGroupTiming(orderGroup) {
         >
           <span>
             注文 {{ orderGroup.order_index }}
-            <i v-if="orderGroup.order_memo" class="table-order-memo-flag">メモ</i>
+            <i
+              v-if="orderGroup.show_order_memo && orderGroup.order_memo"
+              class="table-order-memo-flag"
+            >メモ</i>
           </span>
           <b>注文から{{ orderGroup.elapsed_minutes }}分</b>
           <em v-if="orderGroupTiming(orderGroup).state !== 'normal'">
@@ -195,7 +198,10 @@ function orderGroupTiming(orderGroup) {
           </em>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
-        <p v-if="showOrderMemo && orderGroup.order_memo" class="table-order-memo-inline">
+        <p
+          v-if="showOrderMemo && orderGroup.show_order_memo && orderGroup.order_memo"
+          class="table-order-memo-inline"
+        >
           <strong>注文メモ</strong>
           <span>{{ orderGroup.order_memo }}</span>
         </p>

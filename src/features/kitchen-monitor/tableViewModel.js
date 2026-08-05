@@ -112,16 +112,22 @@ export function sortTableGroups(
 
 function createOrderEntries(table) {
   return table.orders.flatMap((order, orderIndex) =>
-    order.items.map((orderItem) => ({
+    order.items.map((orderItem, orderItemIndex) => ({
       order,
       orderIndex,
       orderItem,
+      isOrderStart: orderItemIndex === 0,
     })),
   );
 }
 
 function createOrderGroups(entries) {
-  return entries.reduce((orderGroups, { order, orderIndex, orderItem }) => {
+  return entries.reduce((orderGroups, {
+    isOrderStart,
+    order,
+    orderIndex,
+    orderItem,
+  }) => {
     let targetOrderGroup = orderGroups.at(-1);
 
     if (targetOrderGroup?.order_id !== order.id) {
@@ -130,6 +136,7 @@ function createOrderGroups(entries) {
         order_index: orderIndex + 1,
         elapsed_minutes: order.ordered_elapsed_minutes,
         order_memo: order.order_memo,
+        show_order_memo: isOrderStart,
         items: [],
       };
       orderGroups.push(targetOrderGroup);
@@ -146,11 +153,13 @@ function createOrderGroups(entries) {
 function estimateEntriesHeight(entries, estimateOptions) {
   let previousOrderId = null;
 
-  return entries.reduce((height, { order, orderItem }) => {
+  return entries.reduce((height, { isOrderStart, order, orderItem }) => {
     const dividerHeight =
       order.id === previousOrderId
         ? 0
-        : ORDER_GROUP_HEADER_HEIGHT + estimateOrderMemoHeight(order.order_memo, estimateOptions);
+        : ORDER_GROUP_HEADER_HEIGHT + (
+          isOrderStart ? estimateOrderMemoHeight(order.order_memo, estimateOptions) : 0
+        );
     previousOrderId = order.id;
     return height + dividerHeight + estimateOrderItemHeight(orderItem, estimateOptions);
   }, 0);
@@ -165,7 +174,11 @@ function takeEntriesWithinHeight(entries, contentBudget, estimateOptions) {
     const dividerHeight =
       entry.order.id === previousOrderId
         ? 0
-        : ORDER_GROUP_HEADER_HEIGHT + estimateOrderMemoHeight(entry.order.order_memo, estimateOptions);
+        : ORDER_GROUP_HEADER_HEIGHT + (
+          entry.isOrderStart
+            ? estimateOrderMemoHeight(entry.order.order_memo, estimateOptions)
+            : 0
+        );
     const additionalHeight = dividerHeight + estimateOrderItemHeight(entry.orderItem, estimateOptions);
 
     if (chunk.length > 0 && chunkHeight + additionalHeight > contentBudget) {
@@ -246,7 +259,9 @@ export function estimateTableCardHeight(table, estimateOptions = {}) {
     (height, orderGroup) =>
       height +
       ORDER_GROUP_HEADER_HEIGHT +
-      estimateOrderMemoHeight(orderGroup.order_memo, estimateOptions) +
+      (orderGroup.show_order_memo
+        ? estimateOrderMemoHeight(orderGroup.order_memo, estimateOptions)
+        : 0) +
       orderGroup.items.reduce(
         (itemHeight, orderItem) =>
           itemHeight + estimateOrderItemHeight(orderItem, estimateOptions),
