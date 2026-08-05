@@ -1,8 +1,11 @@
 <script setup>
-import { Clock, Pin } from '@lucide/vue';
+import { Pin } from '@lucide/vue';
 import { computed } from 'vue';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
-import { getOrderTimingStatus } from '../../features/kitchen-monitor/orderTimingStatus';
+import {
+  getOrderTimeDisplay,
+  getOrderTimingStatus,
+} from '../../features/kitchen-monitor/orderTimingStatus';
 import { createTableNumberStyle } from '../../features/kitchen-monitor/tableNumberPresentation';
 import CountdownProgressLine from './CountdownProgressLine.vue';
 import OrderItemRow from './OrderItemRow.vue';
@@ -63,6 +66,9 @@ const timingStatus = computed(() =>
     warningWindowMinutes: comparison.settings.warningMinutes,
   }),
 );
+const orderTimeDisplay = computed(() =>
+  getOrderTimeDisplay(timingStatus.value, comparison.settings.orderTimeDisplayMode),
+);
 const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
 const showBulkComplete = computed(() => comparison.enabledInfo.value.has('bulkComplete'));
 const isUndoable = computed(() => Boolean(props.completionStartedAt));
@@ -102,14 +108,6 @@ const hasOpenItemAction = computed(() =>
           class="table-number-label"
           :style="createTableNumberStyle(order.table_no, 16)"
         >{{ order.table_no }}</strong>
-        <span
-          class="timing-elapsed"
-          :aria-label="`注文から${order.ordered_elapsed_minutes}分`"
-        >
-          <span aria-hidden="true">
-            <span class="order-elapsed-prefix">注文から</span>{{ order.ordered_elapsed_minutes }}分
-          </span>
-        </span>
         <span>{{ order.guest_count }}名</span>
         <span v-if="order.table_category && order.table_category !== '未分類'" class="order-table-category">
           {{ order.table_category }}
@@ -117,12 +115,11 @@ const hasOpenItemAction = computed(() =>
       </div>
       <div class="order-view-head-status">
         <span
-          v-if="timingStatus.state !== 'normal'"
-          class="timing-status-label"
+          class="timing-status-label order-time-display"
           :class="timingStatus.className"
+          :aria-label="orderTimeDisplay.ariaLabel"
         >
-          <Clock :size="12" :stroke-width="2.4" aria-hidden="true" />
-          {{ timingStatus.label }}
+          {{ orderTimeDisplay.label }}
         </span>
         <button
           class="order-pin-button"

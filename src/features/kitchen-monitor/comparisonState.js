@@ -39,6 +39,7 @@ export function createComparisonStore(initialHash = window.location.hash) {
     settings.itemHideMs,
     settings.targetMinutes,
     settings.warningMinutes,
+    settings.orderTimeDisplayMode,
     settings.motion ? 'motion-on' : 'motion-off',
     settings.info.join(','),
     settings.theme,

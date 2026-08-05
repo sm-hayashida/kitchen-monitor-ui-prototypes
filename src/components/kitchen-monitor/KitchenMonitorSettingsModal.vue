@@ -13,6 +13,7 @@ import {
   comparisonDefaults,
   comparisonItemTapModeOptions,
   comparisonOptions,
+  comparisonOrderTimeDisplayModeOptions,
   comparisonQuantityDisplayStyleOptions,
   comparisonQuantityInteractionModeOptions,
   comparisonThemeOptions,
@@ -88,6 +89,7 @@ function createDraft() {
     tableSortMode: sortMode.value,
     targetMinutes: comparison.settings.targetMinutes,
     warningMinutes: comparison.settings.warningMinutes,
+    orderTimeDisplayMode: comparison.settings.orderTimeDisplayMode,
     orderUndoMs: comparison.settings.orderUndoMs,
     itemHideMs: comparison.settings.itemHideMs,
     quantityDisplayStyle: comparison.settings.quantityDisplayStyle,
@@ -106,6 +108,7 @@ function resetDraft() {
     tableSortMode: 'oldest',
     targetMinutes: comparisonDefaults.targetMinutes,
     warningMinutes: comparisonDefaults.warningMinutes,
+    orderTimeDisplayMode: comparisonDefaults.orderTimeDisplayMode,
     orderUndoMs: comparisonDefaults.orderUndoMs,
     itemHideMs: comparisonDefaults.itemHideMs,
     quantityDisplayStyle: comparisonDefaults.quantityDisplayStyle,
@@ -136,6 +139,7 @@ function save() {
   [
     'targetMinutes',
     'warningMinutes',
+    'orderTimeDisplayMode',
     'orderUndoMs',
     'itemHideMs',
     'quantityDisplayStyle',
@@ -402,6 +406,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                   <select v-model.number="draft.warningMinutes">
                     <option v-for="minute in comparisonOptions.warningMinutes" :key="minute" :value="minute">
                       {{ minute }}分前から
+                    </option>
+                  </select>
+                </label>
+              </section>
+              <section class="settings-card settings-card-wide settings-grid-full">
+                <div class="settings-card-title">
+                  <div><strong>注文カードの時間表示</strong><span>新UI</span></div>
+                  <small>ヘッダーには選択した時間だけを表示</small>
+                </div>
+                <label class="settings-select-row">
+                  <span>表示方式</span>
+                  <select v-model="draft.orderTimeDisplayMode">
+                    <option
+                      v-for="option in comparisonOrderTimeDisplayModeOptions"
+                      :key="option.id"
+                      :value="option.id"
+                    >
+                      {{ option.label }}
                     </option>
                   </select>
                 </label>

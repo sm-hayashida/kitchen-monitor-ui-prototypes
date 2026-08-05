@@ -53,6 +53,32 @@ export function getOrderTimingStatus(
   };
 }
 
+export function getOrderTimeDisplay(timingStatus, mode = 'elapsed') {
+  const elapsedMinutes = Math.max(0, Number(timingStatus?.elapsedMinutes) || 0);
+  if (mode !== 'remaining') {
+    return {
+      label: `${elapsedMinutes}分経過`,
+      ariaLabel: `注文から${elapsedMinutes}分経過`,
+    };
+  }
+
+  const overdueMinutes = Math.max(0, Number(timingStatus?.overdueMinutes) || 0);
+  if (timingStatus?.isOverdue) {
+    return {
+      label: `${overdueMinutes}分超過`,
+      ariaLabel: overdueMinutes === 0
+        ? `目標時間に到達、注文から${elapsedMinutes}分経過`
+        : `目標時間を${overdueMinutes}分超過、注文から${elapsedMinutes}分経過`,
+    };
+  }
+
+  const remainingMinutes = Math.max(0, Number(timingStatus?.remainingMinutes) || 0);
+  return {
+    label: `あと${remainingMinutes}分`,
+    ariaLabel: `目標時間まであと${remainingMinutes}分、注文から${elapsedMinutes}分経過`,
+  };
+}
+
 export function summarizeOrderTimings(orders, options = {}) {
   const statuses = orders.map((order) =>
     getOrderTimingStatus(order.ordered_elapsed_minutes, options),

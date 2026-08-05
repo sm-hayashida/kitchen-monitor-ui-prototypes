@@ -24,6 +24,7 @@ export const comparisonDefaults = Object.freeze({
   itemHideMs: 5000,
   targetMinutes: 15,
   warningMinutes: 3,
+  orderTimeDisplayMode: 'elapsed',
   motion: true,
   info: fullInfo,
   theme: 'orange',
@@ -50,6 +51,7 @@ const allCurrentRecipeFields = Object.freeze({
   itemHideMs: 5000,
   targetMinutes: 15,
   warningMinutes: 3,
+  orderTimeDisplayMode: 'elapsed',
   motion: true,
   info: fullInfo,
 });
@@ -309,6 +311,11 @@ export const comparisonQuantityInteractionModeOptions = Object.freeze([
   Object.freeze({ id: 'aggregate', label: '内訳：同一商品一覧で数量変更' }),
 ]);
 
+export const comparisonOrderTimeDisplayModeOptions = Object.freeze([
+  Object.freeze({ id: 'elapsed', label: '経過時間' }),
+  Object.freeze({ id: 'remaining', label: '残り時間（超過後は超過時間）' }),
+]);
+
 export const comparisonLabels = Object.freeze({
   scenarios: Object.freeze({
     normal: '通常',
@@ -343,6 +350,11 @@ export const comparisonLabels = Object.freeze({
       comparisonItemTapModeOptions.map((option) => [option.id, option.label]),
     ),
   ),
+  orderTimeDisplayModes: Object.freeze(
+    Object.fromEntries(
+      comparisonOrderTimeDisplayModeOptions.map((option) => [option.id, option.label]),
+    ),
+  ),
   info: Object.freeze({
     course: 'コース',
     options: 'オプション',
@@ -374,6 +386,9 @@ export const comparisonOptions = Object.freeze({
   itemHideMs: Object.freeze([0, 3000, 5000, 8000]),
   targetMinutes: Object.freeze([10, 15, 20, 30]),
   warningMinutes: Object.freeze([3, 5]),
+  orderTimeDisplayModes: Object.freeze(
+    comparisonOrderTimeDisplayModeOptions.map((option) => option.id),
+  ),
   themes: Object.freeze(comparisonThemeOptions.map((option) => option.id)),
   urgencies: Object.freeze(comparisonUrgencyOptions.map((option) => option.id)),
   intensities: Object.freeze(comparisonIntensityOptions.map((option) => option.id)),
@@ -392,6 +407,7 @@ export const comparisonQueryKeys = Object.freeze({
   itemHideMs: 'cmp_item_hide',
   targetMinutes: 'cmp_target',
   warningMinutes: 'cmp_warning',
+  orderTimeDisplayMode: 'cmp_order_time',
   motion: 'cmp_motion',
   info: 'cmp_info',
   theme: 'cmp_theme',
@@ -417,6 +433,7 @@ const recipeFieldKeys = Object.freeze([
   'itemHideMs',
   'targetMinutes',
   'warningMinutes',
+  'orderTimeDisplayMode',
   'motion',
   'info',
 ]);
@@ -433,6 +450,7 @@ const differenceFieldLabels = Object.freeze({
   itemHideMs: '商品非表示',
   targetMinutes: '目標',
   warningMinutes: '期限間近',
+  orderTimeDisplayMode: '時間表示',
   motion: '動き',
   info: '表示情報',
   theme: 'テーマ',
@@ -504,6 +522,11 @@ export function normalizeComparisonSettings(candidate = {}) {
       candidate.warningMinutes,
       comparisonOptions.warningMinutes,
       comparisonDefaults.warningMinutes,
+    ),
+    orderTimeDisplayMode: enumValue(
+      candidate.orderTimeDisplayMode,
+      comparisonOptions.orderTimeDisplayModes,
+      comparisonDefaults.orderTimeDisplayMode,
     ),
     motion: typeof candidate.motion === 'boolean' ? candidate.motion : comparisonDefaults.motion,
     info: normalizeInfo(candidate.info),
@@ -587,6 +610,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   assignNumber(candidate, 'itemHideMs', params.get(comparisonQueryKeys.itemHideMs));
   assignNumber(candidate, 'targetMinutes', params.get(comparisonQueryKeys.targetMinutes));
   assignNumber(candidate, 'warningMinutes', params.get(comparisonQueryKeys.warningMinutes));
+  assignString(candidate, 'orderTimeDisplayMode', params.get(comparisonQueryKeys.orderTimeDisplayMode));
   candidate.motion = parseMotion(params.get(comparisonQueryKeys.motion));
   candidate.info = parseInfoParam(params.get(comparisonQueryKeys.info));
   assignString(candidate, 'theme', params.get(comparisonQueryKeys.theme));
@@ -674,6 +698,13 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
   );
   appendSetting(
     params,
+    comparisonQueryKeys.orderTimeDisplayMode,
+    normalized.orderTimeDisplayMode,
+    comparisonDefaults.orderTimeDisplayMode,
+    options,
+  );
+  appendSetting(
+    params,
     comparisonQueryKeys.motion,
     normalized.motion ? 'on' : 'off',
     comparisonDefaults.motion ? 'on' : 'off',
@@ -697,6 +728,7 @@ function createRecipe(recipe) {
   return Object.freeze({
     ...recipe,
     settings: Object.freeze({
+      orderTimeDisplayMode: comparisonDefaults.orderTimeDisplayMode,
       quantityInteractionMode: comparisonDefaults.quantityInteractionMode,
       ...recipe.settings,
       info: Object.freeze([...recipe.settings.info]),
@@ -823,6 +855,9 @@ function getComparisonValueLabel(key, value) {
   }
   if (key === 'targetMinutes' || key === 'warningMinutes') {
     return `${value}分`;
+  }
+  if (key === 'orderTimeDisplayMode') {
+    return comparisonLabels.orderTimeDisplayModes[value];
   }
   if (key === 'motion') {
     return comparisonLabels.motion[String(value)];

@@ -7,6 +7,7 @@ import {
   comparisonItemTapModeOptions,
   comparisonLabels,
   comparisonOptions,
+  comparisonOrderTimeDisplayModeOptions,
   comparisonQuantityDisplayStyleOptions,
   comparisonQuantityInteractionModeOptions,
   comparisonRecipeGroups,
@@ -602,6 +603,21 @@ async function copyShareUrl() {
           <select :value="comparison.settings.warningMinutes" @change="updateNumber('warningMinutes', $event)">
             <option v-for="value in comparisonOptions.warningMinutes" :key="value" :value="value">
               {{ value }}分
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>注文時間</span>
+          <select
+            :value="comparison.settings.orderTimeDisplayMode"
+            @change="updateText('orderTimeDisplayMode', $event)"
+          >
+            <option
+              v-for="mode in comparisonOrderTimeDisplayModeOptions"
+              :key="mode.id"
+              :value="mode.id"
+            >
+              {{ mode.label }}
             </option>
           </select>
         </label>

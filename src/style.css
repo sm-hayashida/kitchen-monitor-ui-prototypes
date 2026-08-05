@@ -2116,15 +2116,15 @@ button {
 }
 
 .comparison-columns-4 .order-view-card-head {
-  gap: 4px;
-  padding-right: 7px;
-  padding-left: 7px;
+  gap: 6px;
+  padding-right: 8px;
+  padding-left: 8px;
 }
 
 .comparison-columns-4 .order-view-primary-meta {
-  gap: 3px;
+  gap: 6px;
   overflow: hidden;
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -2133,16 +2133,12 @@ button {
   white-space: nowrap;
 }
 
-.comparison-columns-4 .order-elapsed-prefix {
-  display: none;
-}
-
 .comparison-columns-4 .order-table-category {
-  max-width: 44px;
+  max-width: 58px;
   overflow: hidden;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 16px;
-  padding: 0 3px;
+  padding: 0 4px;
   text-overflow: ellipsis;
 }
 
@@ -2150,9 +2146,10 @@ button {
   gap: 3px;
 }
 
-.comparison-columns-4 .timing-status-label {
-  font-size: 8px;
-  padding: 0 5px;
+.comparison-columns-4 .order-time-display {
+  min-width: 54px;
+  font-size: 10px;
+  padding: 0 4px;
 }
 
 .order-table-category {
@@ -2173,7 +2170,6 @@ button {
 }
 
 .order-view-card.timing-overdue .order-view-primary-meta strong,
-.order-view-card.timing-overdue .order-view-primary-meta .timing-elapsed,
 .table-view-card.timing-overdue .table-view-primary-meta strong,
 .table-view-card.timing-overdue .table-view-primary-meta .timing-elapsed,
 .aggregate-order-tile header .danger {
@@ -2192,6 +2188,15 @@ button {
   line-height: 1;
   padding: 0 7px;
   white-space: nowrap;
+}
+
+.order-time-display {
+  min-width: 64px;
+  justify-content: center;
+}
+
+.timing-status-label.timing-normal {
+  color: #475569;
 }
 
 .timing-status-label.timing-warning {
@@ -3904,20 +3909,21 @@ button {
 
 @media (width <= 1100px) {
   .comparison-columns-4 .order-view-primary-meta {
-    gap: 2px;
-    font-size: 9px;
+    gap: 4px;
+    font-size: 10px;
   }
 
   .comparison-columns-4 .order-table-category {
-    max-width: 38px;
-    font-size: 7px;
+    max-width: 48px;
+    font-size: 8px;
   }
 
   .comparison-columns-4 .order-view-head-status {
     gap: 2px;
   }
 
-  .comparison-columns-4 .timing-status-label {
+  .comparison-columns-4 .order-time-display {
+    min-width: 52px;
     padding-right: 3px;
     padding-left: 3px;
   }
