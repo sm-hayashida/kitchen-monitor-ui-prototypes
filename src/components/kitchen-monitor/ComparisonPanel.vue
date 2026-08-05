@@ -174,7 +174,7 @@ async function copyShareUrl() {
     @click="openPanel"
   >
     <SlidersHorizontal :size="19" :stroke-width="2.3" aria-hidden="true" />
-    <span>比較ラボ</span>
+    <span>比較</span>
   </button>
 
   <aside
@@ -187,8 +187,8 @@ async function copyShareUrl() {
   >
     <header class="comparison-panel-head">
       <div>
-        <span>UI REVIEW LAB</span>
-        <h2 id="comparison-panel-title">比較ラボ</h2>
+        <span>UI REVIEW</span>
+        <h2 id="comparison-panel-title">比較</h2>
         <p>{{ activeViewLabel }}を表示中</p>
       </div>
       <button ref="closeButtonRef" type="button" aria-label="比較パネルを閉じる" @click="closePanel">

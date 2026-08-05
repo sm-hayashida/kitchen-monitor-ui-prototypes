@@ -11,13 +11,8 @@ import {
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import {
   comparisonDefaults,
-  comparisonItemTapModeOptions,
   comparisonOptions,
   comparisonOrderTimeDisplayModeOptions,
-  comparisonQuantityDisplayStyleOptions,
-  comparisonQuantityInteractionModeOptions,
-  comparisonStatusColorModeOptions,
-  comparisonThemeOptions,
 } from '../../features/kitchen-monitor/comparisonConfig';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import { columnCountPreferenceOptions, useColumnLayoutPreference } from '../../features/kitchen-monitor/useColumnLayoutPreference';
@@ -27,16 +22,8 @@ import {
 } from '../../features/kitchen-monitor/useKitchenMonitorSettings';
 import { useOrderDepartmentSettings } from '../../features/kitchen-monitor/useOrderDepartmentSettings';
 import { useTableLayoutPreferences } from '../../features/kitchen-monitor/useTableLayoutPreferences';
-import ViewModeSettingsPanel from './ViewModeSettingsPanel.vue';
 
-defineProps({
-  activeView: {
-    type: String,
-    required: true,
-  },
-});
-
-const emit = defineEmits(['close', 'switch-view']);
+const emit = defineEmits(['close']);
 const comparison = useComparisonStore();
 const { columnCountPreference, setColumnCountPreference } = useColumnLayoutPreference();
 const {
@@ -57,7 +44,7 @@ const sections = [
   { id: 'display', label: '画面・表示', icon: Eye },
   { id: 'targets', label: '表示対象', icon: UtensilsCrossed },
   { id: 'notifications', label: '通知・時間', icon: BellRing },
-  { id: 'operations', label: '操作・比較', icon: SlidersHorizontal },
+  { id: 'operations', label: '完了動作', icon: SlidersHorizontal },
   { id: 'data', label: 'データ', icon: Database },
 ];
 const activeSection = ref('display');
@@ -93,12 +80,6 @@ function createDraft() {
     orderTimeDisplayMode: comparison.settings.orderTimeDisplayMode,
     orderUndoMs: comparison.settings.orderUndoMs,
     itemHideMs: comparison.settings.itemHideMs,
-    quantityDisplayStyle: comparison.settings.quantityDisplayStyle,
-    quantityInteractionMode: comparison.settings.quantityInteractionMode,
-    itemTapMode: comparison.settings.itemTapMode,
-    theme: comparison.settings.theme,
-    statusColorMode: comparison.settings.statusColorMode,
-    motion: comparison.settings.motion,
   };
 }
 
@@ -113,12 +94,6 @@ function resetDraft() {
     orderTimeDisplayMode: comparisonDefaults.orderTimeDisplayMode,
     orderUndoMs: comparisonDefaults.orderUndoMs,
     itemHideMs: comparisonDefaults.itemHideMs,
-    quantityDisplayStyle: comparisonDefaults.quantityDisplayStyle,
-    quantityInteractionMode: comparisonDefaults.quantityInteractionMode,
-    itemTapMode: comparisonDefaults.itemTapMode,
-    theme: comparisonDefaults.theme,
-    statusColorMode: comparisonDefaults.statusColorMode,
-    motion: comparisonDefaults.motion,
   });
   draftDepartmentIds.value = departments.map((department) => department.id);
 }
@@ -145,12 +120,6 @@ function save() {
     'orderTimeDisplayMode',
     'orderUndoMs',
     'itemHideMs',
-    'quantityDisplayStyle',
-    'quantityInteractionMode',
-    'itemTapMode',
-    'theme',
-    'statusColorMode',
-    'motion',
   ].forEach((key) => comparison.setField(key, draft[key]));
   emit('close');
 }
@@ -193,7 +162,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
         <div>
           <span>KITCHEN MONITOR</span>
           <h2 id="settings-hub-title">設定</h2>
-          <p>現行稼働中の設定11項目と、新しい表示・操作設定をまとめています</p>
+          <p>この端末で使う表示・通知・操作の設定をまとめています</p>
         </div>
         <div class="settings-hub-status">
           <span>この端末</span>
@@ -225,7 +194,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
           <div class="settings-hub-coverage">
             <span>設定網羅</span>
             <strong>現行 11 / 11</strong>
-            <small>＋新UI設定</small>
+            <small>＋利用者設定</small>
           </div>
         </nav>
 
@@ -234,14 +203,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             <header>
               <span>DISPLAY</span>
               <h3>画面・表示</h3>
-              <p>表示単位とカード画面、後方互換のリスト型を切り替えます。</p>
+              <p>この端末で使うカードとリストの表示を変更します。</p>
             </header>
-
-            <ViewModeSettingsPanel
-              :active-view="activeView"
-              comparison-expanded
-              @switch-view="emit('switch-view', $event)"
-            />
 
             <div class="settings-card-grid">
               <section class="settings-card">
@@ -438,8 +401,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
           <section v-else-if="activeSection === 'operations'" class="settings-hub-section">
             <header>
               <span>OPERATIONS</span>
-              <h3>操作・比較</h3>
-              <p>完了操作と数量表示を、このモック上で切り替えて比較できます。</p>
+              <h3>完了動作</h3>
+              <p>調理済みにした後の非表示時間と、取消できる猶予を変更します。</p>
             </header>
 
             <div class="settings-card-grid">
@@ -480,80 +443,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
               </section>
             </div>
 
-            <section class="settings-card settings-card-wide">
-              <div class="settings-card-title">
-                <div><strong>数量と行タップ</strong><span>比較項目</span></div>
-                <small>比較ラボと同じ設定を、主要項目だけここから変更できます</small>
-              </div>
-              <div class="settings-form-grid">
-                <label class="settings-select-row">
-                  <span>数量表示</span>
-                  <select v-model="draft.quantityDisplayStyle">
-                    <option
-                      v-for="option in comparisonQuantityDisplayStyleOptions"
-                      :key="option.id"
-                      :value="option.id"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-                <label class="settings-select-row">
-                  <span>数量変更</span>
-                  <select v-model="draft.quantityInteractionMode">
-                    <option
-                      v-for="option in comparisonQuantityInteractionModeOptions"
-                      :key="option.id"
-                      :value="option.id"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-                <label class="settings-select-row settings-grid-full">
-                  <span>行タップ</span>
-                  <select v-model="draft.itemTapMode">
-                    <option v-for="option in comparisonItemTapModeOptions" :key="option.id" :value="option.id">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section class="settings-card settings-card-wide">
-              <div class="settings-card-title">
-                <div><strong>外観と動き</strong><span>比較項目</span></div>
-                <small>画面構造は変えずに見え方を比較</small>
-              </div>
-              <div class="settings-form-grid">
-                <label class="settings-select-row">
-                  <span>テーマ</span>
-                  <select v-model="draft.theme">
-                    <option v-for="option in comparisonThemeOptions" :key="option.id" :value="option.id">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-                <label class="settings-select-row">
-                  <span>状態色</span>
-                  <select v-model="draft.statusColorMode">
-                    <option
-                      v-for="option in comparisonStatusColorModeOptions"
-                      :key="option.id"
-                      :value="option.id"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-                <label class="settings-switch-row compact">
-                  <span>カードの動き</span>
-                  <input v-model="draft.motion" type="checkbox" />
-                  <i aria-hidden="true"></i>
-                </label>
-              </div>
-            </section>
           </section>
 
           <section v-else class="settings-hub-section">

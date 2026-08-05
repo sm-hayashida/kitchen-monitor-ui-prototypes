@@ -547,9 +547,7 @@ function syncActiveTableCategory(columnIndex) {
     <template #overlay>
       <KitchenMonitorSettingsModal
         v-if="isSettingsOpen"
-        :active-view="activeView"
         @close="isSettingsOpen = false"
-        @switch-view="$emit('switch-view', $event)"
       />
     </template>
   </KitchenMonitorShell>

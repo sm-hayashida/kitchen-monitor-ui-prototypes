@@ -183,7 +183,7 @@ function completionProgress(rowId) {
 }
 
 function showManualAddNotice() {
-  showToast('注文追加は右下の比較ラボから操作できます');
+  showToast('注文追加は右下の比較から操作できます');
 }
 
 function showToast(message) {
@@ -347,9 +347,7 @@ onBeforeUnmount(() => {
     <template #overlay>
       <KitchenMonitorSettingsModal
         v-if="isSettingsOpen"
-        :active-view="activeView"
         @close="isSettingsOpen = false"
-        @switch-view="$emit('switch-view', $event)"
       />
     </template>
   </KitchenMonitorShell>
