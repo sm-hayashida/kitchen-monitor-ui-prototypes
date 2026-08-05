@@ -7,7 +7,7 @@ import { useComparisonStore } from '../features/kitchen-monitor/comparisonState'
 import { useKitchenMonitorSettings } from '../features/kitchen-monitor/useKitchenMonitorSettings';
 import { useOrderDepartmentSettings } from '../features/kitchen-monitor/useOrderDepartmentSettings';
 
-defineProps({
+const props = defineProps({
   activeView: {
     type: String,
     required: true,
@@ -22,6 +22,11 @@ const servedItemIds = new Set(['1008-2']);
 const comparison = useComparisonStore();
 const { ordersCleared, settings } = useKitchenMonitorSettings();
 const { selectedCategoryIds } = useOrderDepartmentSettings();
+const pageClass = computed(() => (
+  props.activeView === 'list-modern'
+    ? 'legacy-list-layout modern-list-layout'
+    : 'legacy-list-layout'
+));
 const isSettingsOpen = ref(false);
 const sortField = ref('ordered_date');
 const sortDirection = ref(settings.sortOrder === 'newest' ? 'asc' : 'desc');
@@ -185,7 +190,7 @@ onBeforeUnmount(() => {
     :categories="[]"
     external-settings
     :now-ms="nowMs"
-    page-class="legacy-list-layout"
+    :page-class="pageClass"
     :show-navigation="false"
     :toast="toast"
     @open-settings="isSettingsOpen = true"

@@ -21,12 +21,10 @@ const displayModes = [
   { id: 'table', label: 'テーブル単位' },
 ];
 
-const sortOptions = [
-  { id: 'completed-desc', label: '完了日時・新しい順' },
-  { id: 'completed-asc', label: '完了日時・古い順' },
-  { id: 'ordered-desc', label: '注文日時・新しい順' },
-  { id: 'ordered-asc', label: '注文日時・古い順' },
-  { id: 'table-asc', label: 'テーブル番号順' },
+const sortColumns = [
+  { id: 'table', label: 'テーブル' },
+  { id: 'ordered', label: '注文日時' },
+  { id: 'completed', label: '完了日時' },
 ];
 
 const hourOptions = Array.from({ length: 24 }, (_, hour) => ({
@@ -36,7 +34,8 @@ const hourOptions = Array.from({ length: 24 }, (_, hour) => ({
 
 const nowMs = Date.now();
 const displayMode = ref('item');
-const sortMode = ref('completed-desc');
+const sortField = ref('completed');
+const sortDirection = ref('desc');
 const completedItems = ref(createCompletedItems());
 const draftFilters = reactive(createEmptyFilters());
 const appliedFilters = ref(createEmptyFilters());
@@ -198,15 +197,40 @@ function groupCompletedItems(items, getKey) {
 function compareCompletedItems(left, right) {
   let compared = 0;
 
-  if (sortMode.value === 'completed-desc') compared = right.completedDateTime.localeCompare(left.completedDateTime);
-  if (sortMode.value === 'completed-asc') compared = left.completedDateTime.localeCompare(right.completedDateTime);
-  if (sortMode.value === 'ordered-desc') compared = right.orderedDateTime.localeCompare(left.orderedDateTime);
-  if (sortMode.value === 'ordered-asc') compared = left.orderedDateTime.localeCompare(right.orderedDateTime);
-  if (sortMode.value === 'table-asc') {
+  if (sortField.value === 'completed') compared = left.completedDateTime.localeCompare(right.completedDateTime);
+  if (sortField.value === 'ordered') compared = left.orderedDateTime.localeCompare(right.orderedDateTime);
+  if (sortField.value === 'table') {
     compared = left.tableNo.localeCompare(right.tableNo, 'ja', { numeric: true, sensitivity: 'base' });
   }
 
+  if (sortDirection.value === 'desc') compared *= -1;
+
   return compared || String(left.id).localeCompare(String(right.id), 'ja', { numeric: true });
+}
+
+function toggleSort(field) {
+  if (sortField.value === field) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+    return;
+  }
+
+  sortField.value = field;
+  sortDirection.value = field === 'table' ? 'asc' : 'desc';
+}
+
+function sortAriaValue(field) {
+  if (sortField.value !== field) return 'none';
+  return sortDirection.value === 'asc' ? 'ascending' : 'descending';
+}
+
+function sortIndicator(field) {
+  if (sortField.value !== field) return '↕';
+  return sortDirection.value === 'asc' ? '▲' : '▼';
+}
+
+function sortButtonAriaLabel(column) {
+  if (sortField.value !== column.id) return `${column.label}で並び替え`;
+  return `${column.label}、現在${sortDirection.value === 'asc' ? '昇順' : '降順'}。タップして反転`;
 }
 
 function dateDaysAgo(daysAgo) {
@@ -331,14 +355,25 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
               {{ mode.label }}
             </button>
           </div>
-          <label class="completed-history-sort-control">
-            <span>並び順</span>
-            <select v-model="sortMode" aria-label="調理済みの並び順">
-              <option v-for="option in sortOptions" :key="option.id" :value="option.id">
-                {{ option.label }}
-              </option>
-            </select>
-          </label>
+          <div
+            v-if="displayMode !== 'item'"
+            class="completed-history-sort-header"
+            role="group"
+            aria-label="調理済みの並び順"
+          >
+            <button
+              v-for="column in sortColumns"
+              :key="column.id"
+              type="button"
+              :class="{ active: sortField === column.id }"
+              :aria-label="sortButtonAriaLabel(column)"
+              :aria-pressed="sortField === column.id"
+              @click="toggleSort(column.id)"
+            >
+              {{ column.label }}
+              <span aria-hidden="true">{{ sortIndicator(column.id) }}</span>
+            </button>
+          </div>
           <strong>{{ resultSummary }}</strong>
         </div>
       </header>
@@ -480,12 +515,24 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
           <table class="completed-history-table">
             <thead>
               <tr>
-                <th>テーブル</th>
-                <th>注文日時</th>
+                <th :aria-sort="sortAriaValue('table')">
+                  <button type="button" @click="toggleSort('table')">
+                    テーブル <span aria-hidden="true">{{ sortIndicator('table') }}</span>
+                  </button>
+                </th>
+                <th :aria-sort="sortAriaValue('ordered')">
+                  <button type="button" @click="toggleSort('ordered')">
+                    注文日時 <span aria-hidden="true">{{ sortIndicator('ordered') }}</span>
+                  </button>
+                </th>
                 <th>メニュー</th>
                 <th>トッピング・メモ</th>
                 <th>数量</th>
-                <th>状態・完了日時</th>
+                <th :aria-sort="sortAriaValue('completed')">
+                  <button type="button" @click="toggleSort('completed')">
+                    状態・完了日時 <span aria-hidden="true">{{ sortIndicator('completed') }}</span>
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>

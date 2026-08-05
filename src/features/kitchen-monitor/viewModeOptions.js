@@ -27,6 +27,7 @@ export const viewModeGroups = [
     defaultView: 'list',
     views: [
       { id: 'list', label: '現行互換・リスト型' },
+      { id: 'list-modern', label: '洗練版・リスト型' },
     ],
   },
   {

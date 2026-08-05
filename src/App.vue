@@ -25,6 +25,7 @@ const pages = {
   'table-n-page': KitchenMonitorTableNPagedPage,
   'table-n-scroll': KitchenMonitorTableNScrollPage,
   list: KitchenMonitorLegacyListPage,
+  'list-modern': KitchenMonitorLegacyListPage,
 };
 
 const activeView = ref(resolveView());

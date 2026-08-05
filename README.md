@@ -15,6 +15,7 @@ Kitchen Monitor の注文別・テーブル別カードUI、後方互換のリ�
   - [`#table-n-page`](./#table-n-page): N型・ページ送り
 - 後方互換
   - [`#list`](./#list): 稼働中Kitchen Monitor相当のリスト型
+  - [`#list-modern`](./#list-modern): 現行リストと同じ機能を持つ洗練版リスト型
 - 調理済み
   - [`#completed`](./#completed): 商品・注文・テーブル単位で検索・ソートできる履歴
 
