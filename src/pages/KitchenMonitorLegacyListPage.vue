@@ -22,8 +22,9 @@ const servedItemIds = new Set(['1008-2']);
 const comparison = useComparisonStore();
 const { ordersCleared, settings } = useKitchenMonitorSettings();
 const { selectedCategoryIds } = useOrderDepartmentSettings();
+const isModernList = computed(() => props.activeView === 'list-modern');
 const pageClass = computed(() => (
-  props.activeView === 'list-modern'
+  isModernList.value
     ? 'legacy-list-layout modern-list-layout'
     : 'legacy-list-layout'
 ));
@@ -127,8 +128,24 @@ function toggleSort(field) {
   sortDirection.value = field === 'ordered_date' ? 'desc' : 'asc';
 }
 
+function sortAriaValue(field) {
+  if (sortField.value !== field) return 'none';
+  return sortDirection.value === 'asc' ? 'ascending' : 'descending';
+}
+
+function sortIndicator(field) {
+  if (sortField.value !== field) return '↕';
+  return sortDirection.value === 'asc' ? '▲' : '▼';
+}
+
+function sortButtonAriaLabel(column) {
+  if (sortField.value !== column.name) return `${column.display}で並び替え`;
+  return `${column.display}、現在${sortDirection.value === 'asc' ? '昇順' : '降順'}。タップして反転`;
+}
+
 function rowClass(row) {
   return {
+    [`status-${row.status}`]: true,
     'tr-danger': row.status === 'started' && row.elapsedMinutes >= comparison.settings.targetMinutes,
     'tr-warning': row.status === 'cooked' || row.status === 'canceled',
     'tr-inactive': row.status === 'canceled',
@@ -210,10 +227,23 @@ onBeforeUnmount(() => {
                         :key="column.name"
                         scope="col"
                         :class="[{ active: column.name === sortField }, column.class]"
-                        @click="column.sortable && toggleSort(column.name)"
+                        :aria-sort="isModernList && column.sortable ? sortAriaValue(column.name) : undefined"
+                        @click="column.sortable && !isModernList && toggleSort(column.name)"
                       >
-                        {{ column.display }}
-                        <span v-if="column.sortable" class="material-icons" aria-hidden="true">
+                        <button
+                          v-if="isModernList && column.sortable"
+                          type="button"
+                          class="legacy-list-sort-button"
+                          :aria-label="sortButtonAriaLabel(column)"
+                          @click.stop="toggleSort(column.name)"
+                        >
+                          {{ column.display }}
+                          <span class="legacy-list-sort-indicator" aria-hidden="true">
+                            {{ sortIndicator(column.name) }}
+                          </span>
+                        </button>
+                        <span v-else>{{ column.display }}</span>
+                        <span v-if="!isModernList && column.sortable" class="material-icons" aria-hidden="true">
                           {{ column.name === sortField ? (sortDirection === 'desc' ? '▼' : '▲') : '' }}
                         </span>
                       </th>
@@ -232,23 +262,34 @@ onBeforeUnmount(() => {
                         <span>{{ row.elapsedMinutes }} 分</span>
                       </td>
                       <td v-if="settings.showCourseName" class="text-link t-16 course-item-td">
-                        {{ row.course_name }}
+                        <span class="legacy-course-label">{{ row.course_name }}</span>
                       </td>
                       <td class="product-desc">
                         <h6>{{ row.name }}</h6>
                         <div class="sub-desc">
-                          <p v-if="row.custom_content_name">{{ row.custom_content_name }}</p>
-                          <p v-if="row.memo">メモ：{{ row.memo }}</p>
+                          <p v-if="row.custom_content_name" class="legacy-print-name">{{ row.custom_content_name }}</p>
+                          <p v-if="row.memo" class="legacy-item-memo">メモ：{{ row.memo }}</p>
                         </div>
                       </td>
                       <td v-if="settings.showToppings" class="t-16 topping">
-                        <div v-if="row.toppings.length" class="text-left align-center">
+                        <div
+                          v-if="row.toppings.length"
+                          class="text-left align-center"
+                          :class="{ 'legacy-topping-list': isModernList }"
+                        >
                           <template v-for="topping in row.toppings" :key="topping.id">
-                            - {{ topping.name }} x {{ topping.quantity * row.quantity }} <br />
+                            <span v-if="isModernList" class="legacy-topping-chip">
+                              {{ topping.name }} x {{ topping.quantity * row.quantity }}
+                            </span>
+                            <template v-else>
+                              - {{ topping.name }} x {{ topping.quantity * row.quantity }} <br />
+                            </template>
                           </template>
                         </div>
                       </td>
-                      <td class="text-bold order-quantity">{{ row.quantity }}</td>
+                      <td class="text-bold order-quantity">
+                        <span class="legacy-quantity-badge">{{ row.quantity }}</span>
+                      </td>
                       <td class="status" style="white-space: nowrap">
                         <button
                           v-if="row.status === 'started' && !completionStartedAt[row.id]"
