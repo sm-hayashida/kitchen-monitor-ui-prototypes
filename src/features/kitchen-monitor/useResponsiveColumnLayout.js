@@ -16,7 +16,7 @@ export function resolveRenderedOverflowCorrection(
     0,
   );
 
-  return Math.max(currentCorrection, renderedOverflow, 0);
+  return Math.max(0, currentCorrection + renderedOverflow);
 }
 
 export function useResponsiveColumnLayout(

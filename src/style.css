@@ -1588,12 +1588,6 @@ button {
   overflow: hidden;
 }
 
-.order-layout-body.n-paged,
-.table-view-workspace.table-layout-n-paged .table-layout-body {
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-}
-
 .horizontal-scroll-frame {
   position: relative;
   display: grid;
@@ -1614,15 +1608,14 @@ button {
   grid-auto-flow: column;
   gap: 14px;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: contain;
   grid-row: 1;
   padding: 0 0 7px;
   scroll-padding-inline: 0;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
   transition: box-shadow 140ms ease;
 }
