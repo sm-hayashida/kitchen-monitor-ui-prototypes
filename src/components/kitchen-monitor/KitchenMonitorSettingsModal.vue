@@ -416,8 +416,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
               </section>
               <section class="settings-card settings-card-wide settings-grid-full">
                 <div class="settings-card-title">
-                  <div><strong>注文カードの時間表示</strong><span>新UI</span></div>
-                  <small>ヘッダーには選択した時間だけを表示</small>
+                  <div><strong>注文・テーブルの時間表示</strong><span>新UI</span></div>
+                  <small>注文ヘッダーとテーブル内注文には選択した時間だけを表示</small>
                 </div>
                 <label class="settings-select-row">
                   <span>表示方式</span>

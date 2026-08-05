@@ -633,7 +633,7 @@ async function copyShareUrl() {
           </select>
         </label>
         <label>
-          <span>注文時間</span>
+          <span>注文・テーブル時間</span>
           <select
             :value="comparison.settings.orderTimeDisplayMode"
             @change="updateText('orderTimeDisplayMode', $event)"

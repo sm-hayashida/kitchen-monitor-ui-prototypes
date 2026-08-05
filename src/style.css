@@ -1794,7 +1794,7 @@ button {
   font-size: 16px;
 }
 
-.order-horizontal-scroller .order-view-card-head small {
+.order-horizontal-scroller .order-view-card-head > small {
   display: none;
   font-size: 9px;
 }
@@ -1902,8 +1902,8 @@ button {
   font-size: 16px;
 }
 
-.order-view-grid.n-paged .order-view-card-head small,
-.order-view-grid.n-scroll .order-view-card-head small {
+.order-view-grid.n-paged .order-view-card-head > small,
+.order-view-grid.n-scroll .order-view-card-head > small {
   font-size: 9px;
 }
 
@@ -1943,8 +1943,8 @@ button {
   font-size: 12px;
 }
 
-.order-view-grid.n-paged .order-view-card-head small,
-.order-view-grid.n-scroll .order-view-card-head small {
+.order-view-grid.n-paged .order-view-card-head > small,
+.order-view-grid.n-scroll .order-view-card-head > small {
   display: none;
 }
 
@@ -2052,6 +2052,7 @@ button {
 }
 
 .order-view-card-head {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -2231,7 +2232,7 @@ button {
   outline-offset: 2px;
 }
 
-.order-view-card-head small {
+.order-view-card-head > small {
   grid-column: 1 / -1;
   overflow: hidden;
   color: #9ca3af;
@@ -3830,6 +3831,7 @@ button {
 }
 
 .table-view-card-head {
+  position: relative;
   display: grid;
   min-height: 43px;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3890,6 +3892,7 @@ button {
   padding: 0 4px;
 }
 
+.order-view-primary-meta .table-joined-names,
 .table-view-primary-meta .table-joined-names {
   min-width: 0;
   overflow: hidden;
@@ -3932,7 +3935,7 @@ button {
 .table-joined-popover {
   position: absolute;
   z-index: 35;
-  top: 47px;
+  top: calc(100% + 4px);
   right: 8px;
   left: 8px;
   display: grid;
@@ -4010,12 +4013,18 @@ button {
   gap: 2px;
 }
 
+.comparison-columns-4 .order-view-primary-meta > .table-joined-summary {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
 .comparison-columns-4 .table-joined-label {
   font-size: 7px;
   line-height: 14px;
   padding: 0 3px;
 }
 
+.comparison-columns-4 .order-view-primary-meta .table-joined-names,
 .comparison-columns-4 .table-view-primary-meta .table-joined-names {
   font-size: 11px;
 }
@@ -4025,10 +4034,6 @@ button {
   height: 22px;
   font-size: 8px;
   padding: 0 4px;
-}
-
-.comparison-columns-4 .table-elapsed-prefix {
-  display: none;
 }
 
 .comparison-columns-4 .table-timing-summary {
@@ -4156,7 +4161,7 @@ button {
 .table-order-divider {
   display: grid;
   min-height: 25px;
-  grid-template-columns: auto auto auto 1fr;
+  grid-template-columns: auto auto 1fr;
   align-items: center;
   gap: 7px;
   background: #f8fafc;
@@ -4219,28 +4224,19 @@ button {
   color: #64748b;
 }
 
-.table-order-divider em {
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
 .table-order-divider.timing-warning span,
 .table-order-divider.timing-warning b,
-.table-order-divider.timing-warning em,
 .table-order-divider.timing-warning small {
   color: var(--timing-warning-text);
 }
 
 .table-order-divider.timing-overdue span,
-.table-order-divider.timing-overdue b,
-.table-order-divider.timing-overdue em {
+.table-order-divider.timing-overdue b {
   color: var(--timing-overdue-text);
 }
 
 .table-order-divider small {
-  grid-column: 4;
+  grid-column: 3;
   justify-self: end;
   font-size: 9px;
 }

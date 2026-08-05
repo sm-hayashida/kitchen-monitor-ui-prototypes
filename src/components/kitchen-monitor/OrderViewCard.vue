@@ -6,9 +6,9 @@ import {
   getOrderTimeDisplay,
   getOrderTimingStatus,
 } from '../../features/kitchen-monitor/orderTimingStatus';
-import { createTableNumberStyle } from '../../features/kitchen-monitor/tableNumberPresentation';
 import CountdownProgressLine from './CountdownProgressLine.vue';
 import OrderItemRow from './OrderItemRow.vue';
+import TableIdentityMeta from './TableIdentityMeta.vue';
 
 const props = defineProps({
   activeItemActionId: {
@@ -46,6 +46,10 @@ const props = defineProps({
   processedUnitNumbersByItemId: {
     type: Object,
     required: true,
+  },
+  tableNameLimit: {
+    type: Number,
+    default: 3,
   },
 });
 
@@ -103,16 +107,19 @@ const hasOpenItemAction = computed(() =>
     ]"
   >
     <header v-if="!isContinuation" class="order-view-card-head">
-      <div class="order-view-primary-meta">
-        <strong
-          class="table-number-label"
-          :style="createTableNumberStyle(order.table_no, 16)"
-        >{{ order.table_no }}</strong>
+      <TableIdentityMeta
+        :base-font-size="16"
+        :entity-id="order.id"
+        :name-limit="tableNameLimit"
+        :table-names="order.joined_table_names"
+        :table-no="order.table_no"
+        variant="order"
+      >
         <span>{{ order.guest_count }}名</span>
         <span v-if="order.table_category && order.table_category !== '未分類'" class="order-table-category">
           {{ order.table_category }}
         </span>
-      </div>
+      </TableIdentityMeta>
       <div class="order-view-head-status">
         <span
           class="timing-status-label order-time-display"

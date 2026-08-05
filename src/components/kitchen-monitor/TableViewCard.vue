@@ -1,13 +1,14 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { Clock, Pin } from '@lucide/vue';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
 import {
+  getOrderTimeDisplay,
   getOrderTimingStatus,
   summarizeOrderTimings,
 } from '../../features/kitchen-monitor/orderTimingStatus';
-import { createTableNumberStyle } from '../../features/kitchen-monitor/tableNumberPresentation';
 import OrderItemRow from './OrderItemRow.vue';
+import TableIdentityMeta from './TableIdentityMeta.vue';
 
 const props = defineProps({
   activeItemActionId: {
@@ -74,26 +75,6 @@ const timingOptions = computed(() => ({
 const showOrderMemo = computed(() => comparison.enabledInfo.value.has('orderMemo'));
 const itemTransitionName = computed(() => comparison.settings.motion ? 'table-item' : '');
 const isContinuation = computed(() => props.table.segment_index > 1);
-const isJoinedTableListOpen = ref(false);
-const joinedTableNames = computed(() => {
-  const names = Array.isArray(props.table.joined_table_names)
-    ? props.table.joined_table_names
-    : [props.table.table_name ?? props.table.table_no];
-  return [...new Set(names.filter(Boolean))];
-});
-const isJoinedTable = computed(() => joinedTableNames.value.length > 1);
-const visibleJoinedTableNames = computed(() =>
-  joinedTableNames.value.slice(0, Math.max(1, Math.floor(props.tableNameLimit))),
-);
-const hiddenJoinedTableCount = computed(() =>
-  Math.max(0, joinedTableNames.value.length - visibleJoinedTableNames.value.length),
-);
-const joinedTableListId = computed(() =>
-  `joined-table-list-${String(props.table.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`,
-);
-const joinedTableLabel = computed(() =>
-  `結合テーブル${joinedTableNames.value.length}卓: ${joinedTableNames.value.join('、')}`,
-);
 const timingStatus = computed(() =>
   getOrderTimingStatus(props.table.earliest_elapsed_minutes, timingOptions.value),
 );
@@ -120,12 +101,11 @@ function orderGroupTiming(orderGroup) {
   return getOrderTimingStatus(orderGroup.elapsed_minutes, timingOptions.value);
 }
 
-function toggleJoinedTableList() {
-  isJoinedTableListOpen.value = !isJoinedTableListOpen.value;
-}
-
-function closeJoinedTableList() {
-  isJoinedTableListOpen.value = false;
+function orderGroupTimeDisplay(orderGroup) {
+  return getOrderTimeDisplay(
+    orderGroupTiming(orderGroup),
+    comparison.settings.orderTimeDisplayMode,
+  );
 }
 </script>
 
@@ -147,47 +127,18 @@ function closeJoinedTableList() {
         'item-menu-open': hasOpenItemAction,
       },
     ]"
-    @keydown.esc.stop="closeJoinedTableList"
   >
     <header v-if="!isContinuation" class="table-view-card-head">
-      <div class="table-view-primary-meta">
-        <span
-          v-if="isJoinedTable"
-          class="table-joined-summary"
-          :aria-label="joinedTableLabel"
-        >
-          <small class="table-joined-label">結合</small>
-          <strong class="table-joined-names">
-            {{ visibleJoinedTableNames.join('・') }}
-          </strong>
-          <button
-            v-if="hiddenJoinedTableCount > 0"
-            class="table-joined-overflow"
-            type="button"
-            :aria-controls="joinedTableListId"
-            :aria-expanded="isJoinedTableListOpen"
-            :aria-label="`${joinedTableLabel}。全卓名を${isJoinedTableListOpen ? '閉じる' : '表示'}`"
-            @click.stop="toggleJoinedTableList"
-          >
-            +{{ hiddenJoinedTableCount }}
-          </button>
-        </span>
-        <strong
-          v-else
-          class="table-number-label"
-          :style="createTableNumberStyle(table.table_no)"
-        >{{ table.table_no }}</strong>
-        <span
-          class="timing-elapsed"
-          :aria-label="`最古${table.earliest_elapsed_minutes}分`"
-        >
-          <span aria-hidden="true">
-            <span class="table-elapsed-prefix">最古 </span>{{ table.earliest_elapsed_minutes }}分
-          </span>
-        </span>
+      <TableIdentityMeta
+        :entity-id="table.id"
+        :name-limit="tableNameLimit"
+        :table-names="table.joined_table_names"
+        :table-no="table.table_no"
+        variant="table"
+      >
         <span>{{ table.orders.length }}注文</span>
         <span>{{ table.guest_count }}名</span>
-      </div>
+      </TableIdentityMeta>
       <div class="table-view-card-actions">
         <span
           v-if="timingSummary.state !== 'normal'"
@@ -233,28 +184,6 @@ function closeJoinedTableList() {
       </div>
     </header>
 
-    <section
-      v-if="isJoinedTableListOpen && !isContinuation"
-      :id="joinedTableListId"
-      class="table-joined-popover"
-      :aria-label="joinedTableLabel"
-      role="region"
-      @click.stop
-    >
-      <header>
-        <strong>結合テーブル {{ joinedTableNames.length }}卓</strong>
-        <button
-          class="table-joined-popover-close"
-          type="button"
-          aria-label="結合テーブル一覧を閉じる"
-          @click.stop="closeJoinedTableList"
-        >
-          ×
-        </button>
-      </header>
-      <p>{{ joinedTableNames.join('・') }}</p>
-    </section>
-
     <div class="table-order-groups">
       <section v-for="orderGroup in table.order_groups" :key="orderGroup.order_id">
         <header
@@ -269,10 +198,9 @@ function closeJoinedTableList() {
               class="table-order-memo-flag"
             >メモ</i>
           </span>
-          <b>注文から{{ orderGroup.elapsed_minutes }}分</b>
-          <em v-if="orderGroupTiming(orderGroup).state !== 'normal'">
-            {{ orderGroupTiming(orderGroup).label }}
-          </em>
+          <b :aria-label="orderGroupTimeDisplay(orderGroup).ariaLabel">
+            {{ orderGroupTimeDisplay(orderGroup).label }}
+          </b>
           <small>{{ orderGroup.items.length }}品</small>
         </header>
         <p

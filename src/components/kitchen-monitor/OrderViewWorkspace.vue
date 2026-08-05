@@ -82,6 +82,7 @@ const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(l
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   preferredColumnCount: columnCountPreference,
 });
+const visibleJoinedTableNameLimit = computed(() => columnCount.value === 4 ? 2 : 3);
 
 const {
   activeItemActionId,
@@ -289,6 +290,7 @@ function toggleOrderPinned(orderId) {
                 :is-pinned="pinnedOrderIds.has(order.source_order_id ?? order.id)"
                 :order="order"
                 :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
+                :table-name-limit="visibleJoinedTableNameLimit"
                 @cancel-item-completion="cancelItemCompletion"
                 @complete-item="completeItemRemaining"
                 @complete-order="toggleOrderCompletion"
@@ -324,6 +326,7 @@ function toggleOrderPinned(orderId) {
               :is-pinned="pinnedOrderIds.has(order.source_order_id ?? order.id)"
               :order="order"
               :processed-unit-numbers-by-item-id="processedUnitNumbersByItemId"
+              :table-name-limit="visibleJoinedTableNameLimit"
               @cancel-item-completion="cancelItemCompletion"
               @complete-item="completeItemRemaining"
               @complete-order="toggleOrderCompletion"
