@@ -1,12 +1,26 @@
 import { ref } from 'vue';
 
 const pinnedOrderIds = ref(new Set());
+const sortMode = ref('oldest');
 
-export function sortOrdersByPinned(orders, pinnedIds = new Set()) {
+export function sortOrdersByPinned(orders, pinnedIds = new Set(), orderSortMode = 'oldest') {
   return [...orders].sort((left, right) => {
     const leftPinned = pinnedIds.has(left.id);
     const rightPinned = pinnedIds.has(right.id);
-    return leftPinned === rightPinned ? 0 : leftPinned ? -1 : 1;
+    if (leftPinned !== rightPinned) {
+      return leftPinned ? -1 : 1;
+    }
+
+    if (orderSortMode === 'table') {
+      return String(left.table_no).localeCompare(String(right.table_no), 'ja', {
+        numeric: true,
+        sensitivity: 'base',
+      });
+    }
+
+    const elapsedDifference = Number(right.ordered_elapsed_minutes ?? 0)
+      - Number(left.ordered_elapsed_minutes ?? 0);
+    return orderSortMode === 'latest' ? -elapsedDifference : elapsedDifference;
   });
 }
 
@@ -27,6 +41,7 @@ export function useOrderLayoutPreferences() {
 
   return {
     pinnedOrderIds,
+    sortMode,
     togglePinned,
   };
 }

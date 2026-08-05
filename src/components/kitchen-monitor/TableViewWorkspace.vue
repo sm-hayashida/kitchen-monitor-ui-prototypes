@@ -88,7 +88,7 @@ const timingOptions = computed(() => ({
 }));
 const { columnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
-  contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  contentInset: 16,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   preferredColumnCount: columnCountPreference,
 });
@@ -384,6 +384,16 @@ function syncActiveTableCategory(columnIndex) {
         @previous-column="scrollTableByColumn(-1)"
         @next-column="scrollTableByColumn(1)"
       />
+      <HeaderLayoutNavigation
+        v-else
+        mode="paged"
+        :current-page="currentPage"
+        :page-count="pageCount"
+        @first-page="setPage(1)"
+        @previous-page="setPage(currentPage - 1)"
+        @next-page="setPage(currentPage + 1)"
+        @last-page="setPage(pageCount)"
+      />
       <label v-if="isGroupedScroll" class="top-bar-group-control" title="テーブルカテゴリ">
         <LayoutGrid :size="17" :stroke-width="2.2" aria-hidden="true" />
         <span class="visually-hidden">テーブルカテゴリ</span>
@@ -519,45 +529,6 @@ function syncActiveTableCategory(columnIndex) {
         </p>
       </div>
 
-      <footer v-if="isPaged" class="order-view-pagination table-view-pagination">
-        <button
-          type="button"
-          aria-label="最初のページ"
-          title="最初のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(1)"
-        >
-          «
-        </button>
-        <button
-          type="button"
-          aria-label="前のページ"
-          title="前のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(currentPage - 1)"
-        >
-          ‹
-        </button>
-        <strong>{{ currentPage }} / {{ pageCount }}</strong>
-        <button
-          type="button"
-          aria-label="次のページ"
-          title="次のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(currentPage + 1)"
-        >
-          ›
-        </button>
-        <button
-          type="button"
-          aria-label="最後のページ"
-          title="最後のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(pageCount)"
-        >
-          »
-        </button>
-      </footer>
     </div>
 
     <ProductAggregateModal

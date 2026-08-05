@@ -78,7 +78,7 @@ const cardEstimateOptions = computed(() => ({
 }));
 const { columnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
-  contentInset: props.layout === 'n-scroll' ? 8 : 0,
+  contentInset: props.layout === 'z' ? 0 : 16,
   minColumnWidth: computed(() => comparison.settings.cardMinWidth),
   preferredColumnCount: columnCountPreference,
 });
@@ -110,7 +110,11 @@ const {
   orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
   itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
 });
-const { pinnedOrderIds, togglePinned: toggleOrderPinnedPreference } = useOrderLayoutPreferences();
+const {
+  pinnedOrderIds,
+  sortMode,
+  togglePinned: toggleOrderPinnedPreference,
+} = useOrderLayoutPreferences();
 
 const {
   selectedCategoryIds,
@@ -128,7 +132,7 @@ const departmentFilteredOrders = computed(() =>
     .filter((order) => order.items.length > 0),
 );
 const sortedDepartmentFilteredOrders = computed(() =>
-  sortOrdersByPinned(departmentFilteredOrders.value, pinnedOrderIds.value),
+  sortOrdersByPinned(departmentFilteredOrders.value, pinnedOrderIds.value, sortMode.value),
 );
 
 const layoutOrders = computed(() =>
@@ -168,7 +172,7 @@ watch(pageCount, (nextPageCount) => {
 });
 
 watch(selectedDepartmentIds, () => {
-  currentPage.value = 1;
+  resetOrderPosition();
 });
 
 function setPage(nextPage) {
@@ -181,6 +185,11 @@ function updateHorizontalNavigation(state) {
 
 function scrollOrderByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
+}
+
+function resetOrderPosition() {
+  currentPage.value = 1;
+  nextTick(() => horizontalScrollerRef.value?.scrollToColumn(0, 'auto'));
 }
 
 function openAggregateForQuantityMode(request) {
@@ -197,8 +206,7 @@ function toggleOrderPinned(orderId) {
     return;
   }
 
-  currentPage.value = 1;
-  nextTick(() => horizontalScrollerRef.value?.scrollToColumn(0));
+  resetOrderPosition();
 }
 
 </script>
@@ -228,6 +236,24 @@ function toggleOrderPinned(orderId) {
         @previous-column="scrollOrderByColumn(-1)"
         @next-column="scrollOrderByColumn(1)"
       />
+      <HeaderLayoutNavigation
+        v-else-if="isPaged"
+        mode="paged"
+        :current-page="currentPage"
+        :page-count="pageCount"
+        @first-page="setPage(1)"
+        @previous-page="setPage(currentPage - 1)"
+        @next-page="setPage(currentPage + 1)"
+        @last-page="setPage(pageCount)"
+      />
+      <label class="top-bar-sort-control" title="注文の並び順">
+        <span class="visually-hidden">注文の並び順</span>
+        <select v-model="sortMode" @change="resetOrderPosition">
+          <option value="oldest">古い注文順</option>
+          <option value="table">テーブル番号順</option>
+          <option value="latest">新しい注文順</option>
+        </select>
+      </label>
     </template>
 
     <div
@@ -314,45 +340,6 @@ function toggleOrderPinned(orderId) {
         </p>
       </div>
 
-      <footer v-if="isPaged" class="order-view-pagination">
-        <button
-          type="button"
-          aria-label="最初のページ"
-          title="最初のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(1)"
-        >
-          «
-        </button>
-        <button
-          type="button"
-          aria-label="前のページ"
-          title="前のページ"
-          :disabled="currentPage === 1"
-          @click="setPage(currentPage - 1)"
-        >
-          ‹
-        </button>
-        <strong>{{ currentPage }} / {{ pageCount }}</strong>
-        <button
-          type="button"
-          aria-label="次のページ"
-          title="次のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(currentPage + 1)"
-        >
-          ›
-        </button>
-        <button
-          type="button"
-          aria-label="最後のページ"
-          title="最後のページ"
-          :disabled="currentPage === pageCount"
-          @click="setPage(pageCount)"
-        >
-          »
-        </button>
-      </footer>
     </div>
 
     <ProductAggregateModal

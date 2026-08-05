@@ -29,8 +29,8 @@ export const comparisonDefaults = Object.freeze({
   info: fullInfo,
   theme: 'orange',
   urgency: 'standard',
-  intensity: 'standard',
-  statusColorMode: 'surface',
+  intensity: 'soft',
+  statusColorMode: 'tint',
 });
 
 export const comparisonRecipeGroups = Object.freeze([
@@ -285,32 +285,32 @@ export const comparisonIntensityOptions = Object.freeze([
 ]);
 
 export const comparisonStatusColorModeOptions = Object.freeze([
-  Object.freeze({ id: 'surface', label: '面で状態（現行）' }),
-  Object.freeze({ id: 'tint', label: '淡い面＋線' }),
+  Object.freeze({ id: 'surface', label: '面で状態' }),
+  Object.freeze({ id: 'tint', label: '淡い面＋線（現行）' }),
   Object.freeze({ id: 'outline', label: '線＋文字' }),
   Object.freeze({ id: 'badge', label: '時間バッジ中心' }),
 ]);
 
 export const comparisonColorPatterns = Object.freeze({
   current: Object.freeze({
-    label: '現行・面で状態',
-    description: '警告と超過をヘッダー面・外枠・左帯で強く表示',
-    settings: Object.freeze({
-      theme: 'orange',
-      urgency: 'standard',
-      intensity: 'standard',
-      statusColorMode: 'surface',
-    }),
-  }),
-  quiet: Object.freeze({
-    label: '静かな橙',
-    description: '第一候補：淡い面と細い線で、通常注文を主役にする',
+    label: '静かな橙（現行）',
+    description: '淡い面と細い線で、通常注文を主役にする',
     recommended: true,
     settings: Object.freeze({
       theme: 'orange',
       urgency: 'standard',
       intensity: 'soft',
       statusColorMode: 'tint',
+    }),
+  }),
+  surface: Object.freeze({
+    label: '面で状態',
+    description: '警告と超過をヘッダー面・外枠・左帯で強く表示',
+    settings: Object.freeze({
+      theme: 'orange',
+      urgency: 'standard',
+      intensity: 'standard',
+      statusColorMode: 'surface',
     }),
   }),
   outline: Object.freeze({
