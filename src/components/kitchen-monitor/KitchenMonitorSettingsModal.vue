@@ -16,6 +16,7 @@ import {
   comparisonOrderTimeDisplayModeOptions,
   comparisonQuantityDisplayStyleOptions,
   comparisonQuantityInteractionModeOptions,
+  comparisonStatusColorModeOptions,
   comparisonThemeOptions,
 } from '../../features/kitchen-monitor/comparisonConfig';
 import { useComparisonStore } from '../../features/kitchen-monitor/comparisonState';
@@ -96,6 +97,7 @@ function createDraft() {
     quantityInteractionMode: comparison.settings.quantityInteractionMode,
     itemTapMode: comparison.settings.itemTapMode,
     theme: comparison.settings.theme,
+    statusColorMode: comparison.settings.statusColorMode,
     motion: comparison.settings.motion,
   };
 }
@@ -115,6 +117,7 @@ function resetDraft() {
     quantityInteractionMode: comparisonDefaults.quantityInteractionMode,
     itemTapMode: comparisonDefaults.itemTapMode,
     theme: comparisonDefaults.theme,
+    statusColorMode: comparisonDefaults.statusColorMode,
     motion: comparisonDefaults.motion,
   });
   draftDepartmentIds.value = departments.map((department) => department.id);
@@ -146,6 +149,7 @@ function save() {
     'quantityInteractionMode',
     'itemTapMode',
     'theme',
+    'statusColorMode',
     'motion',
   ].forEach((key) => comparison.setField(key, draft[key]));
   emit('close');
@@ -527,6 +531,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                   <span>テーマ</span>
                   <select v-model="draft.theme">
                     <option v-for="option in comparisonThemeOptions" :key="option.id" :value="option.id">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="settings-select-row">
+                  <span>状態色</span>
+                  <select v-model="draft.statusColorMode">
+                    <option
+                      v-for="option in comparisonStatusColorModeOptions"
+                      :key="option.id"
+                      :value="option.id"
+                    >
                       {{ option.label }}
                     </option>
                   </select>

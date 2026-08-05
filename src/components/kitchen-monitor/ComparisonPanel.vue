@@ -2,6 +2,7 @@
 import { Check, Clipboard, Plus, RotateCcw, SlidersHorizontal, Trash2, X } from '@lucide/vue';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import {
+  comparisonColorPatterns,
   comparisonInfoKeys,
   comparisonIntensityOptions,
   comparisonItemTapModeOptions,
@@ -12,8 +13,10 @@ import {
   comparisonQuantityInteractionModeOptions,
   comparisonRecipeGroups,
   comparisonRecipes,
+  comparisonStatusColorModeOptions,
   comparisonThemeOptions,
   comparisonUrgencyOptions,
+  getActiveComparisonColorPattern,
   getActiveComparisonRecipe,
   getComparisonDifferenceSummary,
 } from '../../features/kitchen-monitor/comparisonConfig';
@@ -44,7 +47,12 @@ let copiedTimer;
 
 const isOpen = computed(() => comparison.isPanelOpen.value);
 const selectedRecipe = computed(() => getActiveComparisonRecipe(comparison.settings));
+const selectedColorPattern = computed(() => getActiveComparisonColorPattern(comparison.settings));
 const differenceSummary = computed(() => getComparisonDifferenceSummary(comparison.settings));
+const colorPatterns = Object.entries(comparisonColorPatterns).map(([id, pattern]) => ({
+  id,
+  ...pattern,
+}));
 const reviewOrderSummaries = computed(() =>
   comparison.reviewOrderDrafts.value.map((draft, index) =>
     summarizeReviewOrderDraft(draft, index + 1),
@@ -259,46 +267,64 @@ async function copyShareUrl() {
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
           <div><span>03</span><h3>配色</h3></div>
-          <p>アクセントと警告の見分けやすさを比較します</p>
+          <p>橙を基調に、状態色の面積とコントラストを比較します</p>
         </header>
-        <button
-          class="comparison-palette-proposal"
-          :class="{ active: comparison.settings.theme === 'completed' }"
-          type="button"
-          @click="comparison.setField('theme', 'completed')"
-        >
-          <span class="comparison-palette-swatches" aria-hidden="true">
-            <i></i><i></i><i></i><i></i>
-          </span>
-          <span>
-            <strong>調理済み画面パレット</strong>
-            <small>橙・白・スレートを注文／テーブルへ適用</small>
-          </span>
-        </button>
-        <label>
-          <span>テーマ</span>
-          <select :value="comparison.settings.theme" @change="updateText('theme', $event)">
-            <option v-for="theme in comparisonThemeOptions" :key="theme.id" :value="theme.id">
-              {{ theme.label }}
-            </option>
-          </select>
-        </label>
-        <label>
-          <span>警告配色</span>
-          <select :value="comparison.settings.urgency" @change="updateText('urgency', $event)">
-            <option v-for="urgency in comparisonUrgencyOptions" :key="urgency.id" :value="urgency.id">
-              {{ urgency.label }}
-            </option>
-          </select>
-        </label>
-        <label>
-          <span>強度</span>
-          <select :value="comparison.settings.intensity" @change="updateText('intensity', $event)">
-            <option v-for="intensity in comparisonIntensityOptions" :key="intensity.id" :value="intensity.id">
-              {{ intensity.label }}
-            </option>
-          </select>
-        </label>
+        <div class="comparison-color-pattern-grid" aria-label="オレンジ基調の配色案">
+          <button
+            v-for="pattern in colorPatterns"
+            :key="pattern.id"
+            class="comparison-color-pattern"
+            :class="[`pattern-${pattern.id}`, { active: selectedColorPattern === pattern.id }]"
+            type="button"
+            @click="comparison.applyColorPattern(pattern.id)"
+          >
+            <span class="comparison-color-pattern-swatches" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
+            </span>
+            <span>
+              <strong>
+                {{ pattern.label }}
+                <em v-if="pattern.recommended">おすすめ</em>
+              </strong>
+              <small>{{ pattern.description }}</small>
+            </span>
+          </button>
+        </div>
+        <details class="comparison-color-details">
+          <summary>配色を個別に調整</summary>
+          <label>
+            <span>テーマ</span>
+            <select :value="comparison.settings.theme" @change="updateText('theme', $event)">
+              <option v-for="theme in comparisonThemeOptions" :key="theme.id" :value="theme.id">
+                {{ theme.label }}
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>状態色の使い方</span>
+            <select :value="comparison.settings.statusColorMode" @change="updateText('statusColorMode', $event)">
+              <option v-for="mode in comparisonStatusColorModeOptions" :key="mode.id" :value="mode.id">
+                {{ mode.label }}
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>警告配色</span>
+            <select :value="comparison.settings.urgency" @change="updateText('urgency', $event)">
+              <option v-for="urgency in comparisonUrgencyOptions" :key="urgency.id" :value="urgency.id">
+                {{ urgency.label }}
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>強度</span>
+            <select :value="comparison.settings.intensity" @change="updateText('intensity', $event)">
+              <option v-for="intensity in comparisonIntensityOptions" :key="intensity.id" :value="intensity.id">
+                {{ intensity.label }}
+              </option>
+            </select>
+          </label>
+        </details>
         <div class="comparison-color-preview" aria-label="色サンプル">
           <span
             v-for="sample in colorPreviewSamples"

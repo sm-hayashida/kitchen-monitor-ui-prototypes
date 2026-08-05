@@ -15,10 +15,12 @@
   --timing-warning-surface: #ffd59a;
   --timing-warning-accent: #c2410c;
   --timing-warning-text: #1f2937;
+  --timing-warning-card-surface: var(--timing-warning-surface);
   --timing-overdue-surface: #f7c0bb;
   --timing-overdue-accent: #c83e2e;
   --timing-overdue-text: #991b1b;
   --timing-overdue-badge: #b42318;
+  --timing-overdue-card-surface: var(--timing-overdue-surface);
   color: #111827;
   font-family:
     -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP",
@@ -2079,12 +2081,12 @@ button {
 
 .order-view-card.timing-warning .order-view-card-head {
   border-bottom-color: var(--timing-warning-accent);
-  background: var(--timing-warning-surface);
+  background: var(--timing-warning-card-surface);
 }
 
 .order-view-card.timing-overdue .order-view-card-head {
   border-bottom-color: var(--timing-overdue-accent);
-  background: var(--timing-overdue-surface);
+  background: var(--timing-overdue-card-surface);
 }
 
 .order-view-layout .order-view-card.pinned .order-view-card-head {
@@ -3858,12 +3860,12 @@ button {
 
 .table-view-card.timing-warning .table-view-card-head {
   border-bottom-color: var(--timing-warning-accent);
-  background: var(--timing-warning-surface);
+  background: var(--timing-warning-card-surface);
 }
 
 .table-view-card.timing-overdue .table-view-card-head {
   border-bottom-color: var(--timing-overdue-accent);
-  background: var(--timing-overdue-surface);
+  background: var(--timing-overdue-card-surface);
 }
 
 .table-view-card.pinned .table-view-card-head {
@@ -4038,13 +4040,13 @@ button {
 }
 
 .table-order-divider.timing-warning {
-  background: var(--timing-warning-surface);
+  background: var(--timing-warning-card-surface);
   box-shadow: inset 4px 0 var(--timing-warning-accent);
   color: var(--timing-warning-text);
 }
 
 .table-order-divider.timing-overdue {
-  background: var(--timing-overdue-surface);
+  background: var(--timing-overdue-card-surface);
   box-shadow: inset 4px 0 var(--timing-overdue-accent);
 }
 
@@ -4643,6 +4645,22 @@ button {
   --timing-status-strip-width: 7px;
 }
 
+.comparison-status-color-tint {
+  --timing-warning-card-surface: color-mix(in srgb, var(--timing-warning-surface) 28%, #ffffff);
+  --timing-overdue-card-surface: color-mix(in srgb, var(--timing-overdue-surface) 24%, #ffffff);
+}
+
+.comparison-status-color-outline,
+.comparison-status-color-badge {
+  --timing-warning-card-surface: #f8fafc;
+  --timing-overdue-card-surface: #f8fafc;
+}
+
+.comparison-status-color-badge {
+  --timing-status-border-width: 1px;
+  --timing-status-strip-width: 0;
+}
+
 .comparison-token-root .order-view-card.timing-warning,
 .comparison-token-root .order-view-card.timing-overdue {
   border-width: var(--timing-status-border-width);
@@ -4651,6 +4669,59 @@ button {
 .comparison-token-root .order-view-card.timing-warning::before,
 .comparison-token-root .order-view-card.timing-overdue::before {
   width: var(--timing-status-strip-width);
+}
+
+.comparison-status-color-badge .order-view-card.timing-warning:not(.pinned):not(.undoable),
+.comparison-status-color-badge .order-view-card.timing-overdue:not(.pinned):not(.undoable) {
+  border-color: #d8dee7;
+}
+
+.comparison-status-color-badge .order-view-card.timing-warning .order-view-card-head,
+.comparison-status-color-badge .order-view-card.timing-overdue .order-view-card-head,
+.comparison-status-color-badge .table-view-card.timing-warning .table-view-card-head,
+.comparison-status-color-badge .table-view-card.timing-overdue .table-view-card-head {
+  border-bottom-color: #e5e7eb;
+}
+
+.comparison-status-color-badge .order-view-card.timing-warning .order-view-primary-meta {
+  color: #4b5563;
+}
+
+.comparison-status-color-badge .order-view-card.timing-warning .order-view-primary-meta strong,
+.comparison-status-color-badge .order-view-card.timing-overdue .order-view-primary-meta strong,
+.comparison-status-color-badge .table-view-card.timing-warning .table-view-primary-meta strong,
+.comparison-status-color-badge .table-view-card.timing-overdue .table-view-primary-meta strong {
+  color: #111827;
+}
+
+.comparison-status-color-badge .table-view-card.timing-warning .table-view-primary-meta,
+.comparison-status-color-badge .table-view-card.timing-overdue .table-view-primary-meta,
+.comparison-status-color-badge .table-view-card.timing-overdue .table-view-primary-meta .timing-elapsed {
+  color: #64748b;
+}
+
+.comparison-status-color-badge .table-order-divider.timing-warning,
+.comparison-status-color-badge .table-order-divider.timing-overdue {
+  box-shadow: none;
+}
+
+.comparison-status-color-badge .table-order-divider.timing-warning em,
+.comparison-status-color-badge .table-order-divider.timing-overdue em {
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.comparison-status-color-badge .table-order-divider.timing-warning span,
+.comparison-status-color-badge .table-order-divider.timing-overdue span {
+  color: #334155;
+}
+
+.comparison-status-color-badge .table-order-divider.timing-warning b,
+.comparison-status-color-badge .table-order-divider.timing-warning small,
+.comparison-status-color-badge .table-order-divider.timing-overdue b,
+.comparison-status-color-badge .table-order-divider.timing-overdue small {
+  color: #64748b;
 }
 
 .header-layout-navigation {
@@ -5313,14 +5384,18 @@ button {
   color: var(--theme-accent-strong);
 }
 
-.comparison-palette-proposal {
+.comparison-color-pattern-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.comparison-color-pattern {
   display: grid;
   width: 100%;
-  min-height: 58px;
-  grid-template-columns: 92px minmax(0, 1fr);
+  min-height: 64px;
+  grid-template-columns: 78px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 9px;
   border: 1px solid #d6dde6;
   border-radius: 8px;
   background: #ffffff;
@@ -5330,53 +5405,167 @@ button {
   text-align: left;
 }
 
-.comparison-palette-proposal:hover,
-.comparison-palette-proposal.active {
+.comparison-color-pattern:hover,
+.comparison-color-pattern.active {
   border-color: #f97316;
   background: #fff7ed;
   box-shadow: inset 0 0 0 1px #f97316;
 }
 
-.comparison-palette-proposal > span:last-child {
+.comparison-color-pattern > span:last-child {
   display: grid;
   min-width: 0;
   gap: 2px;
 }
 
-.comparison-palette-proposal strong {
+.comparison-color-pattern strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: #9a3412;
   font-size: 11px;
 }
 
-.comparison-palette-proposal small {
+.comparison-color-pattern strong em {
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 7px;
+  font-style: normal;
+  line-height: 16px;
+  padding: 0 5px;
+}
+
+.comparison-color-pattern small {
   color: #64748b;
   font-size: 8px;
   font-weight: 700;
+  line-height: 1.35;
 }
 
-.comparison-palette-swatches {
+.comparison-color-pattern-swatches {
   display: grid;
-  height: 34px;
+  height: 38px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid #d6dde6;
   border-radius: 6px;
-}
-
-.comparison-palette-swatches i:nth-child(1) {
-  background: #ff7a13;
-}
-
-.comparison-palette-swatches i:nth-child(2) {
-  background: #fff7ed;
-}
-
-.comparison-palette-swatches i:nth-child(3) {
   background: #ffffff;
 }
 
-.comparison-palette-swatches i:nth-child(4) {
-  background: #64748b;
+.comparison-color-pattern-swatches i {
+  position: relative;
+}
+
+.comparison-color-pattern-swatches i:nth-child(1) {
+  background: #ff7a13;
+}
+
+.comparison-color-pattern-swatches i:nth-child(2) {
+  background: #f8fafc;
+}
+
+.comparison-color-pattern.pattern-current .comparison-color-pattern-swatches i:nth-child(3) {
+  background: #ffd59a;
+}
+
+.comparison-color-pattern.pattern-current .comparison-color-pattern-swatches i:nth-child(4) {
+  background: #f7c0bb;
+}
+
+.comparison-color-pattern.pattern-quiet .comparison-color-pattern-swatches i:nth-child(3),
+.comparison-color-pattern.pattern-accessible .comparison-color-pattern-swatches i:nth-child(3) {
+  background: #fff6e9;
+}
+
+.comparison-color-pattern.pattern-quiet .comparison-color-pattern-swatches i:nth-child(4),
+.comparison-color-pattern.pattern-accessible .comparison-color-pattern-swatches i:nth-child(4) {
+  background: #fdf0ef;
+}
+
+.comparison-color-pattern.pattern-outline .comparison-color-pattern-swatches i:nth-child(3),
+.comparison-color-pattern.pattern-outline .comparison-color-pattern-swatches i:nth-child(4),
+.comparison-color-pattern.pattern-badge .comparison-color-pattern-swatches i:nth-child(3),
+.comparison-color-pattern.pattern-badge .comparison-color-pattern-swatches i:nth-child(4) {
+  background: #f8fafc;
+}
+
+.comparison-color-pattern.pattern-outline .comparison-color-pattern-swatches i:nth-child(3) {
+  box-shadow: inset 3px 0 #9a3412;
+}
+
+.comparison-color-pattern.pattern-outline .comparison-color-pattern-swatches i:nth-child(4) {
+  box-shadow: inset 3px 0 #991b1b;
+}
+
+.comparison-color-pattern.pattern-badge .comparison-color-pattern-swatches i:nth-child(3)::after,
+.comparison-color-pattern.pattern-badge .comparison-color-pattern-swatches i:nth-child(4)::after {
+  position: absolute;
+  right: 3px;
+  bottom: 4px;
+  left: 3px;
+  height: 8px;
+  border-radius: 2px;
+  content: "";
+}
+
+.comparison-color-pattern.pattern-badge .comparison-color-pattern-swatches i:nth-child(3)::after {
+  background: #ffd59a;
+}
+
+.comparison-color-pattern.pattern-badge .comparison-color-pattern-swatches i:nth-child(4)::after {
+  background: #b42318;
+}
+
+.comparison-color-pattern.pattern-accessible .comparison-color-pattern-swatches i:nth-child(3) {
+  box-shadow: inset 0 0 0 2px #9a3412;
+}
+
+.comparison-color-pattern.pattern-accessible .comparison-color-pattern-swatches i:nth-child(4) {
+  box-shadow: inset 0 0 0 2px #991b1b;
+}
+
+.comparison-color-details {
+  overflow: hidden;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  margin-top: 8px;
+  background: #ffffff;
+}
+
+.comparison-color-details > summary {
+  min-height: 38px;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 38px;
+  padding: 0 10px;
+}
+
+.comparison-color-details[open] > summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comparison-color-details > label {
+  display: grid;
+  min-height: 42px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding: 0 10px;
+}
+
+.comparison-color-details > summary + label {
+  border-top: 0;
+}
+
+.comparison-color-details > label > span {
+  color: #475569;
+  font-size: 9px;
+  font-weight: 850;
 }
 
 .comparison-quantity-style-preview {

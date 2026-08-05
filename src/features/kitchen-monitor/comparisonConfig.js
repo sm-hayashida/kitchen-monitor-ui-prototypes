@@ -30,6 +30,7 @@ export const comparisonDefaults = Object.freeze({
   theme: 'orange',
   urgency: 'standard',
   intensity: 'standard',
+  statusColorMode: 'surface',
 });
 
 export const comparisonRecipeGroups = Object.freeze([
@@ -283,6 +284,74 @@ export const comparisonIntensityOptions = Object.freeze([
   Object.freeze({ id: 'strong', label: '強調' }),
 ]);
 
+export const comparisonStatusColorModeOptions = Object.freeze([
+  Object.freeze({ id: 'surface', label: '面で状態（現行）' }),
+  Object.freeze({ id: 'tint', label: '淡い面＋線' }),
+  Object.freeze({ id: 'outline', label: '線＋文字' }),
+  Object.freeze({ id: 'badge', label: '時間バッジ中心' }),
+]);
+
+export const comparisonColorPatterns = Object.freeze({
+  current: Object.freeze({
+    label: '現行・面で状態',
+    description: '警告と超過をヘッダー面・外枠・左帯で強く表示',
+    settings: Object.freeze({
+      theme: 'orange',
+      urgency: 'standard',
+      intensity: 'standard',
+      statusColorMode: 'surface',
+    }),
+  }),
+  quiet: Object.freeze({
+    label: '静かな橙',
+    description: '第一候補：淡い面と細い線で、通常注文を主役にする',
+    recommended: true,
+    settings: Object.freeze({
+      theme: 'orange',
+      urgency: 'standard',
+      intensity: 'soft',
+      statusColorMode: 'tint',
+    }),
+  }),
+  outline: Object.freeze({
+    label: '線で警告',
+    description: 'カード面は中立にして、外枠・左帯・文字で判別',
+    settings: Object.freeze({
+      theme: 'orange',
+      urgency: 'highContrast',
+      intensity: 'standard',
+      statusColorMode: 'outline',
+    }),
+  }),
+  badge: Object.freeze({
+    label: '時間バッジ中心',
+    description: 'カード面と外枠は中立、時間ラベルへ色を集約',
+    settings: Object.freeze({
+      theme: 'orange',
+      urgency: 'standard',
+      intensity: 'soft',
+      statusColorMode: 'badge',
+    }),
+  }),
+  accessible: Object.freeze({
+    label: '視認性優先',
+    description: '淡い面に太い境界を足し、混雑時の見落としを抑える',
+    settings: Object.freeze({
+      theme: 'orange',
+      urgency: 'highContrast',
+      intensity: 'strong',
+      statusColorMode: 'tint',
+    }),
+  }),
+});
+
+const comparisonColorPatternFields = Object.freeze([
+  'theme',
+  'urgency',
+  'intensity',
+  'statusColorMode',
+]);
+
 export const comparisonQuantityDisplayStyleOptions = Object.freeze([
   Object.freeze({ id: 'current', label: '旧現行・左に数量' }),
   Object.freeze({ id: 'a', label: 'A 残数量のみ' }),
@@ -392,6 +461,7 @@ export const comparisonOptions = Object.freeze({
   themes: Object.freeze(comparisonThemeOptions.map((option) => option.id)),
   urgencies: Object.freeze(comparisonUrgencyOptions.map((option) => option.id)),
   intensities: Object.freeze(comparisonIntensityOptions.map((option) => option.id)),
+  statusColorModes: Object.freeze(comparisonStatusColorModeOptions.map((option) => option.id)),
 });
 
 export const comparisonQueryKeys = Object.freeze({
@@ -413,6 +483,7 @@ export const comparisonQueryKeys = Object.freeze({
   theme: 'cmp_theme',
   urgency: 'cmp_urgency',
   intensity: 'cmp_intensity',
+  statusColorMode: 'cmp_status_color',
 });
 
 export const comparisonReviewOrdersQueryKey = 'cmp_orders';
@@ -456,6 +527,7 @@ const differenceFieldLabels = Object.freeze({
   theme: 'テーマ',
   urgency: '警告配色',
   intensity: '強度',
+  statusColorMode: '状態色',
 });
 
 export function createDefaultComparisonSettings() {
@@ -533,7 +605,31 @@ export function normalizeComparisonSettings(candidate = {}) {
     theme: enumValue(candidate.theme, comparisonOptions.themes, comparisonDefaults.theme),
     urgency: enumValue(candidate.urgency, comparisonOptions.urgencies, comparisonDefaults.urgency),
     intensity: enumValue(candidate.intensity, comparisonOptions.intensities, comparisonDefaults.intensity),
+    statusColorMode: enumValue(
+      candidate.statusColorMode,
+      comparisonOptions.statusColorModes,
+      comparisonDefaults.statusColorMode,
+    ),
   };
+}
+
+export function applyComparisonColorPattern(currentSettings, patternId) {
+  const pattern = comparisonColorPatterns[patternId];
+  if (!pattern) {
+    return normalizeComparisonSettings(currentSettings);
+  }
+
+  return normalizeComparisonSettings({
+    ...currentSettings,
+    ...pattern.settings,
+  });
+}
+
+export function getActiveComparisonColorPattern(settings) {
+  const normalized = normalizeComparisonSettings(settings);
+  return Object.entries(comparisonColorPatterns).find(([, pattern]) =>
+    comparisonColorPatternFields.every((key) => normalized[key] === pattern.settings[key]),
+  )?.[0] ?? 'custom';
 }
 
 export function applyComparisonPreset(currentSettings, presetId) {
@@ -616,6 +712,7 @@ export function parseComparisonHash(hash, routeOptions = {}) {
   assignString(candidate, 'theme', params.get(comparisonQueryKeys.theme));
   assignString(candidate, 'urgency', params.get(comparisonQueryKeys.urgency));
   assignString(candidate, 'intensity', params.get(comparisonQueryKeys.intensity));
+  assignString(candidate, 'statusColorMode', params.get(comparisonQueryKeys.statusColorMode));
 
   return {
     route,
@@ -714,6 +811,13 @@ export function serializeComparisonHash(route, settings, unknownQueryEntries = [
   appendSetting(params, comparisonQueryKeys.theme, normalized.theme, comparisonDefaults.theme, options);
   appendSetting(params, comparisonQueryKeys.urgency, normalized.urgency, comparisonDefaults.urgency, options);
   appendSetting(params, comparisonQueryKeys.intensity, normalized.intensity, comparisonDefaults.intensity, options);
+  appendSetting(
+    params,
+    comparisonQueryKeys.statusColorMode,
+    normalized.statusColorMode,
+    comparisonDefaults.statusColorMode,
+    options,
+  );
   appendReviewOrders(params, options.reviewOrders);
 
   if (options.openPanel) {
@@ -873,6 +977,9 @@ function getComparisonValueLabel(key, value) {
   }
   if (key === 'intensity') {
     return comparisonIntensityOptions.find((option) => option.id === value)?.label ?? value;
+  }
+  if (key === 'statusColorMode') {
+    return comparisonStatusColorModeOptions.find((option) => option.id === value)?.label ?? value;
   }
   return String(value);
 }

@@ -44,6 +44,7 @@ const comparisonTokenClasses = computed(() => [
   `comparison-theme-${comparison.settings.theme}`,
   `comparison-urgency-${comparison.settings.urgency}`,
   `comparison-intensity-${comparison.settings.intensity}`,
+  `comparison-status-color-${comparison.settings.statusColorMode}`,
 ]);
 let isSyncingHash = false;
 

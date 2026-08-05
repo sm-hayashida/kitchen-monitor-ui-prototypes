@@ -1,5 +1,6 @@
 import { computed, inject, provide, reactive, ref } from 'vue';
 import {
+  applyComparisonColorPattern,
   applyComparisonPreset,
   createDefaultComparisonSettings,
   parseComparisonHash,
@@ -45,6 +46,7 @@ export function createComparisonStore(initialHash = window.location.hash) {
     settings.theme,
     settings.urgency,
     settings.intensity,
+    settings.statusColorMode,
   ].join('|'));
 
   function replaceSettings(nextSettings) {
@@ -70,6 +72,10 @@ export function createComparisonStore(initialHash = window.location.hash) {
 
   function applyPreset(presetId) {
     replaceSettings(applyComparisonPreset(settings, presetId));
+  }
+
+  function applyColorPattern(patternId) {
+    replaceSettings(applyComparisonColorPattern(settings, patternId));
   }
 
   function updateFromHash(hash) {
@@ -143,6 +149,7 @@ export function createComparisonStore(initialHash = window.location.hash) {
     reviewOrderRevision,
     reviewOrders,
     settings,
+    applyColorPattern,
     applyPreset,
     createShareUrl,
     resetToCurrent,
