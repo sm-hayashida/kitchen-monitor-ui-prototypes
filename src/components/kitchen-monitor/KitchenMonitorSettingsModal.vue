@@ -78,22 +78,18 @@ function createDraft() {
     targetMinutes: comparison.settings.targetMinutes,
     warningMinutes: comparison.settings.warningMinutes,
     orderTimeDisplayMode: comparison.settings.orderTimeDisplayMode,
-    orderUndoMs: comparison.settings.orderUndoMs,
-    itemHideMs: comparison.settings.itemHideMs,
   };
 }
 
 function resetDraft() {
   Object.assign(draft, {
     ...kitchenMonitorSettingsDefaults,
-    columnCount: 'auto',
+    columnCount: '4',
     tableGroupingEnabled: true,
     tableSortMode: 'oldest',
     targetMinutes: comparisonDefaults.targetMinutes,
     warningMinutes: comparisonDefaults.warningMinutes,
     orderTimeDisplayMode: comparisonDefaults.orderTimeDisplayMode,
-    orderUndoMs: comparisonDefaults.orderUndoMs,
-    itemHideMs: comparisonDefaults.itemHideMs,
   });
   draftDepartmentIds.value = departments.map((department) => department.id);
 }
@@ -118,8 +114,6 @@ function save() {
     'targetMinutes',
     'warningMinutes',
     'orderTimeDisplayMode',
-    'orderUndoMs',
-    'itemHideMs',
   ].forEach((key) => comparison.setField(key, draft[key]));
   emit('close');
 }
@@ -210,7 +204,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
               <section class="settings-card">
                 <div class="settings-card-title">
                   <div><strong>カード列数</strong><span>新UI</span></div>
-                  <small>注文別・テーブル別</small>
+                  <small>4列優先。幅が不足する場合は3列へ縮退</small>
                 </div>
                 <div class="settings-segmented" role="group" aria-label="カード列数">
                   <button
@@ -372,7 +366,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                   <span>事前警告</span>
                   <select v-model.number="draft.warningMinutes">
                     <option v-for="minute in comparisonOptions.warningMinutes" :key="minute" :value="minute">
-                      {{ minute }}分前から
+                      {{ minute ? `${minute}分前から` : 'なし（現行互換）' }}
                     </option>
                   </select>
                 </label>
@@ -406,40 +400,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             </header>
 
             <div class="settings-card-grid">
-              <section class="settings-card">
+              <section class="settings-card settings-card-wide settings-grid-full">
                 <div class="settings-card-title">
-                  <div><strong>調理済後 非表示時間</strong><span class="current">現行設定</span></div>
-                  <small>リスト型の完了ボタン</small>
+                  <div><strong>調理済後 取消可能時間</strong><span class="current">利用者設定</span></div>
+                  <small>注文・商品・リストで共通。既定5秒</small>
                 </div>
                 <label class="settings-number-row">
                   <span>押下後</span>
                   <input v-model.number="draft.hideCompletedSeconds" type="number" min="1" max="100" />
                   <b>秒</b>
                 </label>
-              </section>
-              <section class="settings-card">
-                <div class="settings-card-title">
-                  <div><strong>カード画面の取消猶予</strong><span>新UI</span></div>
-                  <small>注文／商品行を完了した後</small>
-                </div>
-                <div class="settings-form-grid compact-grid">
-                  <label class="settings-select-row">
-                    <span>注文</span>
-                    <select v-model.number="draft.orderUndoMs">
-                      <option v-for="duration in comparisonOptions.orderUndoMs" :key="duration" :value="duration">
-                        {{ duration ? `${duration / 1000}秒` : '即時' }}
-                      </option>
-                    </select>
-                  </label>
-                  <label class="settings-select-row">
-                    <span>商品行</span>
-                    <select v-model.number="draft.itemHideMs">
-                      <option v-for="duration in comparisonOptions.itemHideMs" :key="duration" :value="duration">
-                        {{ duration ? `${duration / 1000}秒` : '即時' }}
-                      </option>
-                    </select>
-                  </label>
-                </div>
+                <p class="settings-field-note">設定時間未満は取消可能で、到達時に完了を確定して一覧から非表示にします。</p>
               </section>
             </div>
 

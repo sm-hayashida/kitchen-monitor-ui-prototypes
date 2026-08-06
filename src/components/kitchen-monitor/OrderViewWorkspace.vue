@@ -52,10 +52,7 @@ const horizontalNavigation = ref({
 const isPaged = computed(() => props.layout === 'n-paged');
 const isScroll = computed(() => props.layout === 'n-scroll');
 const comparison = useComparisonStore();
-const quantitySelectionInAggregate = computed(
-  () => comparison.settings.quantityInteractionMode === 'aggregate',
-);
-const { ordersCleared } = useKitchenMonitorSettings();
+const { ordersCleared, settings } = useKitchenMonitorSettings();
 const scenarioOrders = computed(() => (
   ordersCleared.value
     ? []
@@ -72,14 +69,14 @@ const comparisonPageClass = computed(() => [
 ].join(' '));
 const cardTransitionName = computed(() => comparison.settings.motion ? 'masonry-card' : '');
 const cardEstimateOptions = computed(() => ({
-  cardMinWidth: comparison.settings.cardMinWidth,
+  cardMinWidth: 230,
   rowSpacing: comparison.settings.rowSpacing,
   visibleInfo: comparison.settings.info,
 }));
 const { columnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: props.layout === 'z' ? 0 : 16,
-  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
+  minColumnWidth: 230,
   preferredColumnCount: columnCountPreference,
 });
 const visibleJoinedTableNameLimit = computed(() => columnCount.value === 4 ? 2 : 3);
@@ -108,8 +105,8 @@ const {
   visibleOrders,
 } = useOrderViewMock({
   initialOrders: scenarioOrders,
-  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
-  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
+  orderCompletionDurationMs: computed(() => settings.hideCompletedSeconds * 1000),
+  itemCompletionDurationMs: computed(() => settings.hideCompletedSeconds * 1000),
 });
 const {
   pinnedOrderIds,
@@ -188,6 +185,10 @@ function scrollOrderByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
+function scrollOrderByPage(direction) {
+  horizontalScrollerRef.value?.scrollByPage(direction);
+}
+
 function resetOrderPosition() {
   currentPage.value = 1;
   nextTick(() => horizontalScrollerRef.value?.scrollToColumn(0, 'auto'));
@@ -195,7 +196,7 @@ function resetOrderPosition() {
 
 function openAggregateForQuantityMode(request) {
   openAggregate(request.aggregateKey, {
-    includeCompleted: quantitySelectionInAggregate.value,
+    includeCompleted: true,
     sourceOrderId: request.orderId,
     sourceOrderItemId: request.orderItemId,
   });
@@ -236,6 +237,8 @@ function toggleOrderPinned(orderId) {
         :total-column-count="horizontalNavigation.totalColumnCount"
         @previous-column="scrollOrderByColumn(-1)"
         @next-column="scrollOrderByColumn(1)"
+        @previous-view="scrollOrderByPage(-1)"
+        @next-view="scrollOrderByPage(1)"
       />
       <HeaderLayoutNavigation
         v-else-if="isPaged"
@@ -348,7 +351,7 @@ function toggleOrderPinned(orderId) {
     <ProductAggregateModal
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
-      :quantity-selection-enabled="quantitySelectionInAggregate"
+      quantity-selection-enabled
       :source-order-id="selectedAggregateSourceOrderId"
       :source-order-item-id="selectedAggregateSourceOrderItemId"
       @close="closeAggregate"

@@ -9,30 +9,34 @@ export function getOrderTimingStatus(
   } = {},
 ) {
   const elapsed = Math.max(0, Number(elapsedMinutes) || 0);
-  const difference = elapsed - targetMinutes;
+  const target = Math.max(0, Number(targetMinutes) || 0);
+  const warningWindow = Math.max(0, Number(warningWindowMinutes) || 0);
+  const elapsedWholeMinutes = Math.floor(elapsed);
+  const difference = elapsed - target;
 
   if (difference >= 0) {
+    const overdueMinutes = Math.floor(difference);
     return {
       state: 'overdue',
       className: 'timing-overdue',
-      contextLabel: `注文から${elapsed}分`,
-      label: `${difference}分超過`,
-      elapsedMinutes: elapsed,
-      overdueMinutes: difference,
+      contextLabel: `注文から${elapsedWholeMinutes}分`,
+      label: overdueMinutes === 0 ? '期限到達' : `${overdueMinutes}分超過`,
+      elapsedMinutes: elapsedWholeMinutes,
+      overdueMinutes,
       remainingMinutes: 0,
       isOverdue: true,
       isWarning: false,
     };
   }
 
-  const remainingMinutes = Math.abs(difference);
-  if (remainingMinutes <= warningWindowMinutes) {
+  const remainingMinutes = Math.ceil(Math.abs(difference));
+  if (warningWindow > 0 && Math.abs(difference) <= warningWindow) {
     return {
       state: 'warning',
       className: 'timing-warning',
-      contextLabel: `注文から${elapsed}分`,
+      contextLabel: `注文から${elapsedWholeMinutes}分`,
       label: `あと${remainingMinutes}分`,
-      elapsedMinutes: elapsed,
+      elapsedMinutes: elapsedWholeMinutes,
       overdueMinutes: 0,
       remainingMinutes,
       isOverdue: false,
@@ -43,9 +47,9 @@ export function getOrderTimingStatus(
   return {
     state: 'normal',
     className: 'timing-normal',
-    contextLabel: `注文から${elapsed}分`,
+    contextLabel: `注文から${elapsedWholeMinutes}分`,
     label: '',
-    elapsedMinutes: elapsed,
+    elapsedMinutes: elapsedWholeMinutes,
     overdueMinutes: 0,
     remainingMinutes,
     isOverdue: false,
@@ -65,7 +69,7 @@ export function getOrderTimeDisplay(timingStatus, mode = 'elapsed') {
   const overdueMinutes = Math.max(0, Number(timingStatus?.overdueMinutes) || 0);
   if (timingStatus?.isOverdue) {
     return {
-      label: `${overdueMinutes}分超過`,
+      label: overdueMinutes === 0 ? '期限到達' : `${overdueMinutes}分超過`,
       ariaLabel: overdueMinutes === 0
         ? `目標時間に到達、注文から${elapsedMinutes}分経過`
         : `目標時間を${overdueMinutes}分超過、注文から${elapsedMinutes}分経過`,

@@ -58,10 +58,7 @@ const horizontalNavigation = ref({
 const activeTableCategoryId = ref('');
 const isPaged = computed(() => props.layout === 'n-paged');
 const comparison = useComparisonStore();
-const quantitySelectionInAggregate = computed(
-  () => comparison.settings.quantityInteractionMode === 'aggregate',
-);
-const { ordersCleared } = useKitchenMonitorSettings();
+const { ordersCleared, settings } = useKitchenMonitorSettings();
 const scenarioOrders = computed(() => (
   ordersCleared.value
     ? []
@@ -78,7 +75,7 @@ const comparisonPageClass = computed(() => [
 ].join(' '));
 const cardTransitionName = computed(() => comparison.settings.motion ? 'masonry-card' : '');
 const cardEstimateOptions = computed(() => ({
-  cardMinWidth: comparison.settings.cardMinWidth,
+  cardMinWidth: 230,
   rowSpacing: comparison.settings.rowSpacing,
   visibleInfo: comparison.settings.info,
 }));
@@ -89,7 +86,7 @@ const timingOptions = computed(() => ({
 const { columnCountPreference } = useColumnLayoutPreference();
 const { columnCount, columnHeight, isLayoutReady } = useResponsiveColumnLayout(layoutBodyRef, {
   contentInset: 16,
-  minColumnWidth: computed(() => comparison.settings.cardMinWidth),
+  minColumnWidth: 230,
   preferredColumnCount: columnCountPreference,
 });
 const visibleJoinedTableNameLimit = computed(() => columnCount.value === 4 ? 2 : 3);
@@ -116,8 +113,8 @@ const {
   visibleOrders,
 } = useOrderViewMock({
   initialOrders: scenarioOrders,
-  orderCompletionDurationMs: computed(() => comparison.settings.orderUndoMs),
-  itemCompletionDurationMs: computed(() => comparison.settings.itemHideMs),
+  orderCompletionDurationMs: computed(() => settings.hideCompletedSeconds * 1000),
+  itemCompletionDurationMs: computed(() => settings.hideCompletedSeconds * 1000),
 });
 
 const {
@@ -283,9 +280,13 @@ function scrollTableByColumn(direction) {
   horizontalScrollerRef.value?.scrollByColumn(direction);
 }
 
+function scrollTableByPage(direction) {
+  horizontalScrollerRef.value?.scrollByPage(direction);
+}
+
 function openAggregateForQuantityMode(request) {
   openAggregate(request.aggregateKey, {
-    includeCompleted: quantitySelectionInAggregate.value,
+    includeCompleted: true,
     sourceOrderId: request.orderId,
     sourceOrderItemId: request.orderItemId,
   });
@@ -384,6 +385,8 @@ function syncActiveTableCategory(columnIndex) {
         :total-column-count="horizontalNavigation.totalColumnCount"
         @previous-column="scrollTableByColumn(-1)"
         @next-column="scrollTableByColumn(1)"
+        @previous-view="scrollTableByPage(-1)"
+        @next-view="scrollTableByPage(1)"
       />
       <HeaderLayoutNavigation
         v-else
@@ -537,7 +540,7 @@ function syncActiveTableCategory(columnIndex) {
     <ProductAggregateModal
       v-if="selectedAggregate"
       :aggregate="selectedAggregate"
-      :quantity-selection-enabled="quantitySelectionInAggregate"
+      quantity-selection-enabled
       :source-order-id="selectedAggregateSourceOrderId"
       :source-order-item-id="selectedAggregateSourceOrderItemId"
       @close="closeAggregate"

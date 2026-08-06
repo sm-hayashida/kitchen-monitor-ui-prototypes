@@ -4,15 +4,12 @@ Kitchen Monitor の注文別・テーブル別カードUI、後方互換のリ�
 
 固定モックデータのみを使用し、API通信や実運用データは含みません。iPad横画面での比較確認を想定しています。
 
-## 比較画面
+## レビュー画面
 
 - 注文別
-  - [`#order-n-scroll`](./#order-n-scroll): N型・横スクロール（基本候補）
-  - [`#order-n-page`](./#order-n-page): N型・ページ送り
-  - [`#order`](./#order): Z型・縦展開
+  - [`#order-n-scroll`](./#order-n-scroll): N型・横スクロール（採用方針）
 - テーブル別
-  - [`#table-n-scroll`](./#table-n-scroll): N型・横スクロール（基本候補）
-  - [`#table-n-page`](./#table-n-page): N型・ページ送り
+  - [`#table-n-scroll`](./#table-n-scroll): N型・横スクロール（採用方針）
 - 後方互換
   - [`#list`](./#list): 稼働中Kitchen Monitor相当のリスト型
   - [`#list-modern`](./#list-modern): 現行リストと同じ機能を持つ新UIリスト型
@@ -21,7 +18,7 @@ Kitchen Monitor の注文別・テーブル別カードUI、後方互換のリ�
 
 未指定URLや旧URLは`#order-n-scroll`へフォールバックします。
 
-数量は「対象商品の残数 / 全注文の同一商品未調理合計」で表示します。右下の「比較」では画面案、レイアウト、列数、数量操作、注文カードとテーブル内注文の経過／残り時間表示、オレンジ基調の状態色5案、任意注文などを比較できます。ヘッダーの歯車からは、稼働中Kitchen Monitorの設定11項目と、この端末で使う利用者設定だけを変更できます。
+注文・テーブルは3列／4列（既定4列）で、横スワイプに加えて1列単位と表示幅単位の矢印移動を使えます。数量操作は同一商品の注文別内訳モーダルへ統一し、6個以下／7個以上／1ページ8注文の境界を暫定表示します。右下の「比較」では数量表示、商品タップ、現行／新案の時間境界、配色、固定データなどを比較できます。ヘッダーの歯車からは、取消可能時間を注文・商品・リスト共通で1〜100秒から設定できます（既定5秒）。
 
 ## 現行仕様の正本
 
@@ -53,5 +50,5 @@ npm run preview
 - `src/features/kitchen-monitor/orderViewMockData.js`: 注文別表示用の固定注文データ
 - `src/features/kitchen-monitor/useOrderViewMock.js`: 商品横断集計、完了、取消のモック状態
 - `src/features/kitchen-monitor/useResponsiveColumnLayout.js`: 利用可能幅に応じた列数計算
-- `src/features/kitchen-monitor/useColumnLayoutPreference.js`: 自動・2〜4列の表示設定
+- `src/features/kitchen-monitor/useColumnLayoutPreference.js`: 3列・4列の表示設定
 - `src/style.css`: iPad 横画面向けの共通スタイル

@@ -46,6 +46,8 @@ defineEmits([
   'last-page',
   'previous-column',
   'next-column',
+  'previous-view',
+  'next-view',
 ]);
 </script>
 
@@ -55,12 +57,15 @@ defineEmits([
     :class="`mode-${mode}`"
   >
     <template v-if="mode === 'horizontal'">
-      <div class="header-layout-progress" aria-hidden="true">
-        <i :style="{ transform: `scaleX(${scrollProgress})` }"></i>
-      </div>
-      <output class="header-layout-position" aria-live="polite">
-        {{ firstVisibleColumn }}–{{ lastVisibleColumn }} / {{ totalColumnCount }}列
-      </output>
+      <button
+        type="button"
+        :disabled="!canPrevious"
+        aria-label="表示幅分前へ"
+        title="表示幅分前へ"
+        @click="$emit('previous-view')"
+      >
+        «
+      </button>
       <button
         type="button"
         :disabled="!canPrevious"
@@ -70,6 +75,9 @@ defineEmits([
       >
         ‹
       </button>
+      <output class="header-layout-position" aria-live="polite">
+        {{ firstVisibleColumn }}–{{ lastVisibleColumn }} / {{ totalColumnCount }}列
+      </output>
       <button
         type="button"
         :disabled="!canNext"
@@ -79,6 +87,18 @@ defineEmits([
       >
         ›
       </button>
+      <button
+        type="button"
+        :disabled="!canNext"
+        aria-label="表示幅分次へ"
+        title="表示幅分次へ"
+        @click="$emit('next-view')"
+      >
+        »
+      </button>
+      <div class="header-layout-progress" aria-hidden="true">
+        <i :style="{ transform: `scaleX(${scrollProgress})` }"></i>
+      </div>
     </template>
 
     <template v-else>

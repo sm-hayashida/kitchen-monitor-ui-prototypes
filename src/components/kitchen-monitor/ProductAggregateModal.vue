@@ -149,6 +149,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
           </div>
         </header>
 
+        <p v-if="quantitySelectionEnabled" class="aggregate-quantity-review-note">
+          <strong>暫定境界</strong>
+          6個以下は0〜Nを直接選択、7個以上は−／＋／全て、1ページ8注文。部分数量の本体保存方式は要相談です。
+        </p>
+
         <div class="aggregate-order-grid">
           <article
             v-for="match in pageMatches"

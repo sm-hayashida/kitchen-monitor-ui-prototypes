@@ -5,8 +5,6 @@ export const viewModeGroups = [
     shortLabel: '注文',
     defaultView: 'order-n-scroll',
     views: [
-      { id: 'order', label: 'Z型・縦展開' },
-      { id: 'order-n-page', label: 'N型・ページ' },
       { id: 'order-n-scroll', label: 'N型・横スクロール' },
     ],
   },
@@ -16,7 +14,6 @@ export const viewModeGroups = [
     shortLabel: 'テーブル',
     defaultView: 'table-n-scroll',
     views: [
-      { id: 'table-n-page', label: 'N型・ページ' },
       { id: 'table-n-scroll', label: 'N型・横スクロール' },
     ],
   },

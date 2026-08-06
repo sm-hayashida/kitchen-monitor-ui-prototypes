@@ -75,7 +75,9 @@ button {
   max-height: 100%;
   min-width: 0;
   min-height: 0;
+  grid-template-columns: 100%;
   grid-template-rows: 60px minmax(0, 1fr);
+  contain: inline-size;
   overflow: hidden;
   border-radius: 16px;
   background: #f8fafc;
@@ -84,6 +86,9 @@ button {
 
 .top-bar {
   display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
@@ -214,8 +219,12 @@ button {
 }
 
 .monitor-content {
+  width: 100%;
+  max-width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .monitor-content .content-grid {
@@ -225,6 +234,9 @@ button {
 .content-grid {
   position: relative;
   display: grid;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 0;
   grid-template-columns: 188px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
@@ -1567,6 +1579,7 @@ button {
 }
 
 .order-layout-body {
+  min-width: 0;
   min-height: 0;
 }
 
@@ -3536,6 +3549,17 @@ button {
   font-size: 28px;
 }
 
+.aggregate-quantity-review-note {
+  margin: 0;
+  border-bottom: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.55;
+  padding: 8px 16px;
+}
+
 .aggregate-order-grid {
   display: grid;
   min-height: 0;
@@ -3790,6 +3814,8 @@ button {
 
 .table-view-workspace {
   display: grid;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   min-height: 0;
   grid-template-rows: minmax(0, 1fr);
@@ -3803,6 +3829,7 @@ button {
 }
 
 .table-layout-body {
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -4856,8 +4883,10 @@ button {
 }
 
 .header-layout-navigation.mode-horizontal {
-  width: 214px;
-  grid-template-columns: minmax(42px, 1fr) 72px 38px 38px;
+  position: relative;
+  width: 248px;
+  grid-template-columns: 38px 38px minmax(72px, 1fr) 38px 38px;
+  padding-bottom: 4px;
 }
 
 .header-layout-navigation.mode-paged {
@@ -4884,6 +4913,14 @@ button {
   overflow: hidden;
   border-radius: 999px;
   background: rgb(255 255 255 / 38%);
+}
+
+.header-layout-navigation.mode-horizontal .header-layout-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
 }
 
 .header-layout-progress i {
@@ -5130,6 +5167,24 @@ button {
   color: #64748b;
   font-size: 10px;
   font-weight: 700;
+}
+
+.comparison-fixed-note {
+  margin: 8px 0 0;
+  border: 1px solid #dbe2ea;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.55;
+  padding: 8px 9px;
+}
+
+.comparison-fixed-note.timing-boundary-note {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
 }
 
 .comparison-control-section > label {
@@ -6252,6 +6307,16 @@ button {
 
 .settings-number-row b {
   min-width: 16px;
+}
+
+.settings-field-note {
+  margin: 0;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.55;
+  padding-top: 9px;
 }
 
 .settings-switch-row > span {
@@ -7987,9 +8052,10 @@ button {
   }
 
   .header-layout-navigation.mode-horizontal {
-    width: 174px;
-    grid-template-columns: minmax(28px, 1fr) 62px 34px 34px;
+    width: 214px;
+    grid-template-columns: 34px 34px minmax(62px, 1fr) 34px 34px;
     gap: 4px;
+    padding-bottom: 4px;
   }
 
   .header-layout-navigation.mode-paged {

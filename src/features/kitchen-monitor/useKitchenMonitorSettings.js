@@ -5,7 +5,7 @@ const settingsStorageKey = 'kitchen-monitor-ui-settings-v1';
 export const kitchenMonitorSettingsDefaults = Object.freeze({
   sortOrder: 'oldest',
   lineHeight: 'medium',
-  hideCompletedSeconds: 3,
+  hideCompletedSeconds: 5,
   showCourseName: true,
   showToppings: true,
   masterSoundEnabled: true,
@@ -91,7 +91,7 @@ function normalizeSettings(candidate = {}) {
     normalized.lineHeight = candidate.lineHeight;
   }
   if (candidate.hideCompletedSeconds !== undefined) {
-    normalized.hideCompletedSeconds = clampInteger(candidate.hideCompletedSeconds, 1, 100, 3);
+    normalized.hideCompletedSeconds = clampInteger(candidate.hideCompletedSeconds, 1, 100, 5);
   }
 
   [

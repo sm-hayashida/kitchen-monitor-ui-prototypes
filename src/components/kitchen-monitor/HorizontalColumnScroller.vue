@@ -171,7 +171,19 @@ function scrollByColumn(direction) {
   scrollToColumn(currentColumnIndex.value + direction);
 }
 
-defineExpose({ scrollByColumn, scrollToColumn });
+function scrollByPage(direction) {
+  const pageStep = Math.max(1, visibleColumnCount.value);
+  const maxStartIndex = props.alignLastColumnToStart
+    ? Math.max(0, totalColumnCount.value - 1)
+    : Math.max(0, totalColumnCount.value - pageStep);
+  const targetIndex = Math.min(
+    maxStartIndex,
+    Math.max(0, currentColumnIndex.value + direction * pageStep),
+  );
+  scrollToColumn(targetIndex);
+}
+
+defineExpose({ scrollByColumn, scrollByPage, scrollToColumn });
 
 watch(
   () => props.columns,

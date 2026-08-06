@@ -10,7 +10,6 @@ import {
   comparisonOptions,
   comparisonOrderTimeDisplayModeOptions,
   comparisonQuantityDisplayStyleOptions,
-  comparisonQuantityInteractionModeOptions,
   comparisonRecipeGroups,
   comparisonRecipes,
   comparisonStatusColorModeOptions,
@@ -97,6 +96,14 @@ const activeViewLabel = computed(() =>
     .flatMap((group) => group.views)
     .find((view) => view.id === props.activeView)?.label ?? props.activeView,
 );
+const timingBoundarySummary = computed(() => {
+  const target = comparison.settings.targetMinutes;
+  const warning = comparison.settings.warningMinutes;
+  const warningLabel = warning > 0
+    ? `${target - warning}:00から期限間近`
+    : '事前警告なし';
+  return `${warningLabel}／${target}:00〜${target}:59は期限到達／${target + 1}:00から1分超過`;
+});
 
 watch(isOpen, async (open) => {
   if (open) {
@@ -204,7 +211,7 @@ async function copyShareUrl() {
         </strong>
       </div>
       <div>
-        <span>現行との差分</span>
+        <span>既定との差分</span>
         <strong>{{ differenceSummary.differenceCount + reviewOrderSummaries.length }}件</strong>
       </div>
       <div class="comparison-difference-chips">
@@ -212,7 +219,7 @@ async function copyShareUrl() {
         <span v-if="reviewOrderSummaries.length">追加注文:{{ reviewOrderSummaries.length }}件</span>
         <span v-if="differenceSummary.extraCount > 0">ほか{{ differenceSummary.extraCount }}件</span>
       </div>
-      <small>既定：N 左残数／合計・数量はその場で変更・行タップで全完了</small>
+      <small>既定：4列優先・N 左残数／合計・数量は注文別内訳モーダル・行タップで全完了</small>
     </div>
 
     <div class="comparison-panel-scroll">
@@ -468,28 +475,8 @@ async function copyShareUrl() {
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
           <div><span>06</span><h3>密度</h3></div>
-          <p>列数・カード幅・行間を独立して試せます</p>
+          <p>カード内の行間を比較します。列数は設定の3列／4列を使用します</p>
         </header>
-        <div class="comparison-segmented-control" role="group" aria-label="カード列数">
-          <button
-            v-for="column in comparisonOptions.columnCounts"
-            :key="column"
-            type="button"
-            :class="{ active: comparison.settings.columnCount === column }"
-            :aria-pressed="comparison.settings.columnCount === column"
-            @click="comparison.setField('columnCount', column)"
-          >
-            {{ column === 'auto' ? '自動' : `${column}列` }}
-          </button>
-        </div>
-        <label>
-          <span>カード幅</span>
-          <select :value="comparison.settings.cardMinWidth" @change="updateNumber('cardMinWidth', $event)">
-            <option v-for="width in comparisonOptions.cardMinWidths" :key="width" :value="width">
-              {{ width }}px
-            </option>
-          </select>
-        </label>
         <label>
           <span>行間</span>
           <select :value="comparison.settings.rowSpacing" @change="updateText('rowSpacing', $event)">
@@ -575,44 +562,17 @@ async function copyShareUrl() {
       <section class="comparison-control-section">
         <header class="comparison-section-heading">
           <div><span>08</span><h3>操作と時間</h3></div>
-          <p>数量アクセス・完了方法・取消猶予・警告時刻を試します</p>
+          <p>完了方法と、現行／新案の警告時刻を試します</p>
         </header>
-        <label>
-          <span>数量操作</span>
-          <select
-            :value="comparison.settings.quantityInteractionMode"
-            @change="updateText('quantityInteractionMode', $event)"
-          >
-            <option
-              v-for="mode in comparisonQuantityInteractionModeOptions"
-              :key="mode.id"
-              :value="mode.id"
-            >
-              {{ mode.label }}
-            </option>
-          </select>
-        </label>
+        <p class="comparison-fixed-note">
+          <strong>数量操作は固定</strong>
+          同一商品の注文別内訳モーダルを使用。6個以下／7個以上／8注文単位の境界はレビュー対象です。
+        </p>
         <label>
           <span>商品タップ</span>
           <select :value="comparison.settings.itemTapMode" @change="updateText('itemTapMode', $event)">
             <option v-for="mode in comparisonItemTapModeOptions" :key="mode.id" :value="mode.id">
               {{ mode.label }}
-            </option>
-          </select>
-        </label>
-        <label>
-          <span>注文取消</span>
-          <select :value="comparison.settings.orderUndoMs" @change="updateNumber('orderUndoMs', $event)">
-            <option v-for="value in comparisonOptions.orderUndoMs" :key="value" :value="value">
-              {{ value / 1000 }}秒
-            </option>
-          </select>
-        </label>
-        <label>
-          <span>商品非表示</span>
-          <select :value="comparison.settings.itemHideMs" @change="updateNumber('itemHideMs', $event)">
-            <option v-for="value in comparisonOptions.itemHideMs" :key="value" :value="value">
-              {{ value / 1000 }}秒
             </option>
           </select>
         </label>
@@ -628,10 +588,14 @@ async function copyShareUrl() {
           <span>期限間近</span>
           <select :value="comparison.settings.warningMinutes" @change="updateNumber('warningMinutes', $event)">
             <option v-for="value in comparisonOptions.warningMinutes" :key="value" :value="value">
-              {{ value }}分
+              {{ value ? `${value}分` : 'なし（現行互換）' }}
             </option>
           </select>
         </label>
+        <p class="comparison-fixed-note timing-boundary-note">
+          <strong>境界</strong>
+          {{ timingBoundarySummary }}
+        </p>
         <label>
           <span>注文・テーブル時間</span>
           <select
@@ -660,7 +624,7 @@ async function copyShareUrl() {
     <footer class="comparison-panel-actions">
       <button type="button" class="comparison-reset-button" @click="comparison.resetToCurrent">
         <RotateCcw :size="17" aria-hidden="true" />
-        <span>現行値へ戻す</span>
+        <span>既定値へ戻す</span>
       </button>
       <button type="button" class="comparison-copy-button" @click="copyShareUrl">
         <Check v-if="copied" :size="17" aria-hidden="true" />
